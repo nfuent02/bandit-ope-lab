@@ -44,10 +44,44 @@ def simulate_policy_value(n,policy,seed):
     
     return np.mean(rewards)
 
+def exact_policy_value(policy):
+    value = 0.0
+    for x in (0, 1):
+        probability_x = p_1 if x == 1 else (1 - p_1)
+        for a in (0, 1):
+            value += policy[x, a] * true_mu[x, a] * probability_x
+    return value
+
+def ips_policy_value(data):
+    r = data[:, 2]
+    mu = data[:, 3]
+    propensity = data[:, 4]
+    target_action_prob = data[:, 5]
+
+    importance_weights = target_action_prob / propensity
+
+    return np.mean(importance_weights * r)
 
 
+# Las políticas deben ser distribuciones de probabilidad válidas.
+assert np.allclose(b.sum(axis=1), 1)
+assert np.allclose(pi.sum(axis=1), 1)
+
+# Los parámetros Bernoulli deben estar entre 0 y 1.
+assert np.all((true_mu >= 0) & (true_mu <= 1))
+
+# El cálculo programado debe coincidir con el cálculo manual.
+assert np.isclose(exact_policy_value(b), V_b)
+assert np.isclose(exact_policy_value(pi), V_pi)
+
+# La misma semilla debe reproducir exactamente el dataset.
+data_1 = generate_logged_data(1000, seed=42)
+data_2 = generate_logged_data(1000, seed=42)
+
+assert np.array_equal(data_1, data_2)
 
 data = generate_logged_data(n, seed)
+
 
 x = data[:, 0].astype(int)
 a = data[:, 1].astype(int)
@@ -55,21 +89,10 @@ r = data[:, 2]
 mu = data[:, 3]
 propensity = data[:, 4]
 target_action_prob = data[:, 5]
-
-
-
-assert np.allclose(b.sum(axis=1), 1)
-assert np.allclose(pi.sum(axis=1), 1)
-assert np.all((true_mu >= 0) & (true_mu <= 1))
-
-data_1 = generate_logged_data(1000, seed=42)
-data_2 = generate_logged_data(1000, seed=42)
-
-assert np.array_equal(data_1, data_2)
+importance_weights = target_action_prob / propensity
 
 assert np.allclose(propensity, b[x, a])
 assert np.allclose(target_action_prob, pi[x, a])
-
 
 
 print("P(X=1):", np.mean(x == 1))
@@ -88,17 +111,16 @@ for x_value in (0, 1):
             true_mu[x_value, a_value],
         )
 
-print("Exact V(b):", V_b)
-print("Simulated V(b):", simulate_policy_value(n, b, seed=43))
+print("Exact V(b):", exact_policy_value(b))
+print("Direct simulation V(b):", simulate_policy_value(n, b, seed=43))
 
-print("Exact V(pi):", V_pi)
-print("Simulated V(pi):", simulate_policy_value(n, pi, seed=44))
+print("Exact V(pi):", exact_policy_value(pi))
+print("Direct simulation V(pi):", simulate_policy_value(n, pi, seed=44))
+print("IPS estimate:", ips_policy_value(data))
 
-
-
-
-
-
+print("Minimum weight:", importance_weights.min())
+print("Maximum weight:", importance_weights.max())
+print("Mean weight:", importance_weights.mean())
 
 
 

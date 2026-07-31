@@ -1,4 +1,5 @@
 import numpy as np
+from sympy import re
 
 n = 200000
 seed = 42
@@ -292,11 +293,149 @@ compare_overlap_experiment([0.3, 0.1, 0.05, 0.02, 0.01], 2000, 200, seed)
  """
 
 def exact_ips_variance(logging_policy, sample_size):
-    e_psi_2 = p_1 * (pi[0, 0]**2 * true_mu[0, 0]/logging_policy[0, 0] + pi[0, 1]**2 * true_mu[0, 1]/logging_policy[0, 1]) + (1-p_1) * (pi[1, 0]**2 * true_mu[1, 0]/logging_policy[1, 0] + pi[1, 1]**2 * true_mu[1, 1]/logging_policy[1, 1])
+    e_psi_2 = 0.0
+
+    for x in (0, 1):
+        probability_x = p_1 if x == 1 else 1 - p_1
+        for a in (0, 1):
+            contribution = probability_x * (pi[x, a]**2 * true_mu[x, a] / logging_policy[x, a])
+            e_psi_2 += contribution
+
     e_psi = exact_policy_value(pi)
     var_psi = e_psi_2 - e_psi**2
     return var_psi / sample_size
 
-for epsilon in [0.3, 0.1, 0.05, 0.02, 0.01]:
+""" for epsilon in [0.3, 0.1, 0.05, 0.02, 0.01]:
     logging_policy = make_logging_policy(epsilon)
     print(f"Exact IPS variance for epsilon={epsilon}:", exact_ips_variance(logging_policy, 200))
+ """
+
+def dm_policy_value(data, reward_model, target_policy):
+    x = data[:, 0].astype(int)
+
+    contributions = np.zeros(len(x))
+
+    for i,xi in enumerate(x):
+        contribution = sum(reward_model[xi, action] * target_policy[xi, action] for action in [0, 1])
+        contributions[i] = contribution
+
+    return np.mean(contributions)
+
+""" 
+oracle_reward_model = true_mu.copy()
+constant_reward_model = np.full((2, 2), 0.5)
+
+print(dm_policy_value(data, oracle_reward_model, pi))
+print(dm_policy_value(data, constant_reward_model, pi))
+
+ """
+
+def dr_policy_value(data, reward_model, target_policy):
+    x = data[:, 0].astype(int)
+    a = data[:, 1].astype(int)
+    r = data[:, 2]
+    propensity = data[:, 4]
+
+    importance_weights = target_policy[x, a] / propensity
+
+    contributions = np.zeros(len(x))
+
+    for i, xi in enumerate(x):
+        baseline = sum(reward_model[xi, action] * target_policy[xi, action] for action in [0, 1])
+
+        residual_correction = importance_weights[i] * (r[i] - reward_model[xi, a[i]])
+
+        contributions[i] = baseline + residual_correction
+
+    return np.mean(contributions)
+
+def compare_dm_ips_snips_dr_monte_carlo(number_of_replications, sample_size, policy, oracle_reward_model, constant_reward_model, base_seed):
+    dm_oracle_values = np.zeros(number_of_replications)
+    dm_constant_values = np.zeros(number_of_replications)
+    ips_values = np.zeros(number_of_replications)
+    snips_values = np.zeros(number_of_replications)
+    dr_oracle_values = np.zeros(number_of_replications)
+    dr_constant_values = np.zeros(number_of_replications)
+    true_value = exact_policy_value(pi)
+
+    for i in range(number_of_replications):
+        data = generate_logged_data(
+            sample_size, 
+            policy, 
+            base_seed + i)
+        
+        dm_oracle_values[i] = dm_policy_value(
+            data, 
+            oracle_reward_model, 
+            pi)
+        
+        dm_constant_values[i] = dm_policy_value(
+            data, 
+            constant_reward_model, 
+            pi)
+        
+        ips_values[i] = ips_policy_value(data)
+        snips_values[i] = snips_policy_value(data)
+        dr_oracle_values[i] = dr_policy_value(
+            data, 
+            oracle_reward_model, 
+            pi)
+        dr_constant_values[i] = dr_policy_value(
+            data, 
+            constant_reward_model, 
+            pi)
+
+    print("\n--- DM oracle stats ---")
+    print("Mean: ", np.mean(dm_oracle_values))
+    print("Bias: ", np.mean(dm_oracle_values) - true_value)
+    print("Variance: ", np.mean((dm_oracle_values - np.mean(dm_oracle_values))**2))
+    print("MSE: ", np.mean((dm_oracle_values - true_value)**2))
+    print("Min: ", dm_oracle_values.min())
+    print("Max: ", dm_oracle_values.max())
+    
+    print("\n--- DM constant stats ---")
+    print("Mean: ", np.mean(dm_constant_values))
+    print("Bias: ", np.mean(dm_constant_values) - true_value)
+    print("Variance: ", np.mean((dm_constant_values - np.mean(dm_constant_values))**2))
+    print("MSE: ", np.mean((dm_constant_values - true_value)**2))
+    print("Min: ", dm_constant_values.min())
+    print("Max: ", dm_constant_values.max())
+
+    print("\n--- IPS stats ---")
+    print("Mean: ", np.mean(ips_values))
+    print("Bias: ", np.mean(ips_values) - true_value)
+    print("Variance: ", np.mean((ips_values - np.mean(ips_values))**2))
+    print("MSE: ", np.mean((ips_values - true_value)**2))
+    print("Min: ", ips_values.min())
+    print("Max: ", ips_values.max())
+
+    print("\n--- SNIPS stats ---")
+    print("Mean: ", np.mean(snips_values))
+    print("Bias: ", np.mean(snips_values) - true_value)
+    print("Variance: ", np.mean((snips_values - np.mean(snips_values))**2))
+    print("MSE: ", np.mean((snips_values - true_value)**2))
+    print("Min: ", snips_values.min())
+    print("Max: ", snips_values.max())
+
+    print("\n--- DR oracle stats ---")
+    print("Mean: ", np.mean(dr_oracle_values))
+    print("Bias: ", np.mean(dr_oracle_values) - true_value)
+    print("Variance: ", np.mean((dr_oracle_values - np.mean(dr_oracle_values))**2))
+    print("MSE: ", np.mean((dr_oracle_values - true_value)**2))
+    print("Min: ", dr_oracle_values.min())
+    print("Max: ", dr_oracle_values.max())
+
+    print("\n--- DR constant stats ---")
+    print("Mean: ", np.mean(dr_constant_values))
+    print("Bias: ", np.mean(dr_constant_values) - true_value)
+    print("Variance: ", np.mean((dr_constant_values - np.mean(dr_constant_values))**2))
+    print("MSE: ", np.mean((dr_constant_values - true_value)**2))
+    print("Min: ", dr_constant_values.min())
+    print("Max: ", dr_constant_values.max())
+    
+
+
+compare_dm_ips_snips_dr_monte_carlo(2000, 200, b, true_mu, np.full((2, 2), 0.5), seed)
+
+
+

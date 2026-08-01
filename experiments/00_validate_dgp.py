@@ -1,3 +1,5 @@
+from email import policy
+
 import numpy as np
 from sympy import re
 
@@ -330,13 +332,12 @@ print(dm_policy_value(data, constant_reward_model, pi))
 
  """
 
-def dr_policy_value(data, reward_model, target_policy):
+def dr_policy_value(data, reward_model, target_policy, estimated_logging_policy=None):
     x = data[:, 0].astype(int)
     a = data[:, 1].astype(int)
     r = data[:, 2]
     propensity = data[:, 4]
-
-    importance_weights = target_policy[x, a] / propensity
+    importance_weights = target_policy[x, a] / estimated_logging_policy[x, a] if estimated_logging_policy is not None else target_policy[x, a] / propensity
 
     contributions = np.zeros(len(x))
 
@@ -434,8 +435,172 @@ def compare_dm_ips_snips_dr_monte_carlo(number_of_replications, sample_size, pol
     print("Max: ", dr_constant_values.max())
     
 
-
+""" 
 compare_dm_ips_snips_dr_monte_carlo(2000, 200, b, true_mu, np.full((2, 2), 0.5), seed)
+ """
+
+def exact_dr_bias(estimated_reward_model, estimated_logging_policy, true_reward_model, true_logging_policy, target_policy):
+    bias = 0.0
+
+    for x in (0, 1):
+        probability_x = p_1 if x == 1 else 1 - p_1
+        for a in (0, 1):
+            contribution = probability_x * target_policy[x, a] * (estimated_reward_model[x, a] - true_reward_model[x, a]) * (1 - true_logging_policy[x, a] / estimated_logging_policy[x, a])
+            bias += contribution
+
+    return bias
+
+def compare_dr_with_correct_and_wrong_models(number_of_replications, sample_size, target_policy, true_mu, logging_policy, base_seed):
+
+    correct_mu = true_mu.copy()
+    wrong_mu = np.full((2, 2), 0.5)
+
+    correct_b_hat = logging_policy.copy()
+    wrong_b_hat = np.full((2, 2), 0.5)
+
+    dr_both_correct = np.zeros(number_of_replications)
+    dr_both_wrong = np.zeros(number_of_replications)
+    dr_mu_wrong = np.zeros(number_of_replications)
+    dr_b_wrong = np.zeros(number_of_replications)
+
+    for i in range(number_of_replications):
+        data = generate_logged_data(
+            sample_size, 
+            logging_policy, 
+            base_seed + i)
+        dr_both_correct[i] = dr_policy_value(
+            data, 
+            correct_mu, 
+            target_policy,
+            correct_b_hat)
+        dr_both_wrong[i] = dr_policy_value(
+            data, 
+            wrong_mu, 
+            target_policy,
+            wrong_b_hat)
+        dr_mu_wrong[i] = dr_policy_value(
+            data,
+            wrong_mu,
+            target_policy,
+            correct_b_hat)
+        dr_b_wrong[i] = dr_policy_value(
+            data,
+            correct_mu,
+            target_policy,
+            wrong_b_hat)
+        
+
+    print("\n--- model correct, logging policy correct ---")
+    print("Mean: ", np.mean(dr_both_correct))
+    print("Bias: ", np.mean(dr_both_correct) - exact_policy_value(target_policy))
+    print("Variance: ", np.mean((dr_both_correct - np.mean(dr_both_correct))**2))
+    print("MSE: ", np.mean((dr_both_correct - exact_policy_value(target_policy))**2))
+    print("Exact bias (theoretical): ", exact_dr_bias(correct_mu, correct_b_hat, true_mu, logging_policy, target_policy))
+
+    print("\n--- model wrong, logging policy correct ---")
+    print("Mean: ", np.mean(dr_mu_wrong))
+    print("Bias: ", np.mean(dr_mu_wrong) - exact_policy_value(target_policy))
+    print("Variance: ", np.mean((dr_mu_wrong - np.mean(dr_mu_wrong))**2))
+    print("MSE: ", np.mean((dr_mu_wrong - exact_policy_value(target_policy))**2))
+    print("Exact bias (theoretical): ", exact_dr_bias(wrong_mu, correct_b_hat, true_mu, logging_policy, target_policy))
+
+    print("\n--- model correct, logging policy wrong ---")
+    print("Mean: ", np.mean(dr_b_wrong))
+    print("Bias: ", np.mean(dr_b_wrong) - exact_policy_value(target_policy))
+    print("Variance: ", np.mean((dr_b_wrong - np.mean(dr_b_wrong))**2))
+    print("MSE: ", np.mean((dr_b_wrong - exact_policy_value(target_policy))**2))
+    print("Exact bias (theoretical): ", exact_dr_bias(correct_mu, wrong_b_hat, true_mu, logging_policy, target_policy))
+
+    print("\n--- model wrong, logging policy wrong ---")
+    print("Mean: ", np.mean(dr_both_wrong))
+    print("Bias: ", np.mean(dr_both_wrong) - exact_policy_value(target_policy))
+    print("Variance: ", np.mean((dr_both_wrong - np.mean(dr_both_wrong))**2))
+    print("MSE: ", np.mean((dr_both_wrong - exact_policy_value(target_policy))**2))
+    print("Exact bias (theoretical): ", exact_dr_bias(wrong_mu, wrong_b_hat, true_mu, logging_policy, target_policy))
+
+""" 
+compare_dr_with_correct_and_wrong_models(2000, 200, target_policy, true_mu, logging_policy, seed)
+ """
+
+def compare_dr_with_misspecification(number_of_replications, sample_size, target_policy, true_mu, logging_policy, levels, base_seed):
+    correct_mu = true_mu.copy()
+    wrong_mu = np.full((2, 2), 0.5)
+
+    correct_b_hat = logging_policy.copy()
+    wrong_b_hat = np.full((2, 2), 0.5)
+
+    true_policy_value = exact_policy_value(target_policy)
+
+    results = []
+
+    datasets = [
+        generate_logged_data(
+            sample_size, 
+            logging_policy, 
+            base_seed + k) for k in range(number_of_replications)
+    ]
+
+    for i, lambda_value in enumerate(levels):
+        for j, gamma_value in enumerate(levels):
+            interpolated_mu = (1-lambda_value) * correct_mu + lambda_value * wrong_mu
+            interpolated_b_hat = (1-gamma_value) * correct_b_hat + gamma_value * wrong_b_hat
+            dr_values = np.zeros(number_of_replications)
+            for k, data in enumerate(datasets):
+                dr_values[k] = dr_policy_value(
+                    data,
+                    interpolated_mu,
+                    target_policy,
+                    interpolated_b_hat
+                )
+            monte_carlo_mean = np.mean(dr_values)
+            monte_carlo_bias = monte_carlo_mean - true_policy_value
+
+            exact_bias = exact_dr_bias(
+                interpolated_mu, 
+                interpolated_b_hat, 
+                true_mu, 
+                logging_policy, 
+                target_policy)
+
+            results.append({
+                "lambda": lambda_value,
+                "gamma": gamma_value,
+                "exact_bias": exact_dr_bias(interpolated_mu, interpolated_b_hat, true_mu, logging_policy, target_policy),
+                "monte_carlo_bias":  monte_carlo_mean - exact_policy_value(target_policy),
+                "bias_error": monte_carlo_bias - exact_bias,
+                "variance": np.mean((dr_values - monte_carlo_mean)**2),
+                "mse": np.mean((dr_values - exact_policy_value(target_policy))**2)
+            })
+
+    return results
 
 
+def print_misspecification_results(results):
 
+    assert np.isclose(
+        exact_dr_bias(
+            true_mu,
+            b,
+            true_mu,
+            b,
+            pi,
+        ),
+        0.0,
+    )
+
+    assert np.isclose(
+        exact_dr_bias(
+            np.full((2, 2), 0.5),
+            np.full((2, 2), 0.5),
+            true_mu,
+            b,
+            pi,
+        ),
+        -0.096,
+    )
+
+    print("\n--- DR misspecification results ---")
+    for result in results:
+        print(f"\nlambda: {result['lambda']}, \ngamma: {result['gamma']}, \nexact_bias: {result['exact_bias']}, \nmonte_carlo_bias: {result['monte_carlo_bias']}, \nvariance: {result['variance']}, \nmse: {result['mse']}")
+
+print_misspecification_results(compare_dr_with_misspecification(2000, 200, pi, true_mu, b, [0.0, 0.25, 0.5, 0.75, 1.0], seed))

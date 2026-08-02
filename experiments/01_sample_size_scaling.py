@@ -24,7 +24,7 @@ def ips_monte_carlo_statistics(
         ips_estimates[repetition] = estimators.ips_policy_value(logged_data)
 
 
-    true_value = theory.exact_policy_value(dgp.context_probabilities, dgp.target_policy, dgp.true_mu)
+    true_value = theory.exact_policy_value(dgp.context_probabilities, target_policy, dgp.true_mu)
 
     # Calculate mean estimate
     ips_monte_carlo_mean = np.mean(ips_estimates)

@@ -105,12 +105,12 @@ def main():
 
     data = dgp.generate_logged_data(SAMPLE_SIZE, dgp.logging_policy, seed=SEED)
 
-    x = data[:, 0].astype(int)
-    a = data[:, 1].astype(int)
-    r = data[:, 2]
-    mu = data[:, 3]
-    propensity = data[:, 4]
-    target_action_prob = data[:, 5]
+    x = np.array([observation["xi"] for observation in data])
+    a = np.array([observation["ai"] for observation in data])
+    r = np.array([observation["ri"] for observation in data])
+    mu = np.array([observation["mui"] for observation in data])
+    propensity = np.array([observation["logprob"] for observation in data])
+    target_action_prob = np.array([observation["targetprob"] for observation in data])
     importance_weights = target_action_prob / propensity
 
     EXPECTED_LOGGING_POLICY_VALUE = 0.435

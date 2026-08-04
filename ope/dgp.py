@@ -23,15 +23,22 @@ def generate_data_point(policy, rng):
     ai = rng.binomial(1, policy[xi, 1])
     mui = reward_mean(xi, ai)
     ri = rng.binomial(1, mui)
-    return xi, ai, ri, mui, policy[xi,ai], target_prob(xi, ai)
+    return {
+        "xi": xi,
+        "ai": ai,
+        "ri": ri,
+        "mui": mui,
+        "logprob": policy[xi, ai],
+        "targetprob": target_prob(xi, ai)
+    }
 
 def generate_logged_data(n, logging_policy, seed):
     rng = np.random.default_rng(seed)  # Set a random seed for reproducibility
     data = []
     for _ in range(n):
-        xi, ai, ri, mui, logprob, targetprob = generate_data_point(logging_policy, rng)
-        data.append((xi, ai, ri, mui, logprob, targetprob))
-    return np.array(data)
+        data_point = generate_data_point(logging_policy, rng)
+        data.append(data_point)
+    return data
 
 def make_logging_policy(epsilon):
     assert 0 <= epsilon <= 1, "Epsilon must be between 0 and 1"
@@ -42,6 +49,6 @@ def simulate_policy_value(n,policy,seed):
     rewards = []
 
     for _ in range(n):
-        rewards.append(generate_data_point(policy, rng)[2])  # Append the reward (ri) to the rewards list
+        rewards.append(generate_data_point(policy, rng)["ri"])  # Append the reward (ri) to the rewards list
     
     return np.mean(rewards)

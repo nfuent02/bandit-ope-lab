@@ -3,7 +3,7 @@ import numpy as np
 
 
 def dm_policy_value(data, target_policy, reward_model):
-    x = data[:, 0].astype(int)
+    x = [observation["xi"] for observation in data]
 
     contributions = np.zeros(len(x))
 
@@ -14,29 +14,28 @@ def dm_policy_value(data, target_policy, reward_model):
     return np.mean(contributions)
 
 def ips_policy_value(data):
-    r = data[:, 2]
-    
-    propensity = data[:, 4]
-    target_action_prob = data[:, 5]
-    importance_weights = target_action_prob / propensity
+    r = [observation["ri"] for observation in data]
+    propensity = [observation["logprob"] for observation in data]
+    target_action_prob = [observation["targetprob"] for observation in data]
+    importance_weights = np.array(target_action_prob) / np.array(propensity)
 
     return np.mean(importance_weights * r)
 
 def snips_policy_value(data):
-    r = data[:, 2]
-    propensity = data[:, 4]
-    target_action_prob = data[:, 5]
+    r = [observation["ri"] for observation in data]
+    propensity = [observation["logprob"] for observation in data]
+    target_action_prob = [observation["targetprob"] for observation in data]
 
-    importance_weights = target_action_prob / propensity
+    importance_weights = np.array(target_action_prob) / np.array(propensity)
     normalized_weights = importance_weights / np.mean(importance_weights)
 
     return np.mean(normalized_weights * r)
 
 def dr_policy_value(data, reward_model, target_policy, estimated_logging_policy=None):
-    x = data[:, 0].astype(int)
-    a = data[:, 1].astype(int)
-    r = data[:, 2]
-    propensity = data[:, 4]
+    x = [observation["xi"] for observation in data]
+    a = [observation["ai"] for observation in data]
+    r = [observation["ri"] for observation in data]
+    propensity = [observation["logprob"] for observation in data]
     importance_weights = target_policy[x, a] / estimated_logging_policy[x, a] if estimated_logging_policy is not None else target_policy[x, a] / propensity
 
     contributions = np.zeros(len(x))

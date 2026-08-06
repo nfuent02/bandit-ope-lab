@@ -8,8 +8,13 @@ NUMBER_OF_REPLICATIONS = 2000
 SAMPLE_SIZE = 200
 EPSILON_VALUES = [0.3, 0.1, 0.05, 0.02, 0.01]
 SEED = 42
-ESTIMATOR_FUNCTIONS = {"IPS": estimators.ips_policy_value, "SNIPS": estimators.snips_policy_value}
-
+oracle_reward_model = dgp.true_mu.copy()
+ESTIMATOR_FUNCTIONS = {
+    "DM": lambda data: estimators.dm_policy_value(data, dgp.target_policy, oracle_reward_model),
+    "IPS": estimators.ips_policy_value,
+    "SNIPS": estimators.snips_policy_value,
+    "DR": lambda data: estimators.dr_policy_value(data, oracle_reward_model, dgp.target_policy),
+}
 
 def monte_carlo_statistics(
     estimator_functions,
@@ -120,7 +125,7 @@ def main():
     print(results.to_string(index=False))
 
     results.to_csv(
-        "results/tables/overlap.csv", 
+        "results/tables/overlap_cuatro_estimadores.csv", 
         index=False
     )
 

@@ -1,0 +1,290 @@
+---
+title: "Anatomía empírica de estimadores de Offline Policy Evaluation (OPE)"
+lang: es
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+jupyter: python3
+---
+
+# Estimadores
+
+Se define el valor de una política $\pi : \mathcal{X} \to \Delta(\mathcal{A})$ como la recompensa esperada bajo la política $\pi$:
+$$
+V^{\pi} = \mathbb{E}_{\pi} [R] = \mathbb{E}[\sum_a \pi(a|X) \cdot \mu(X,a)]
+$$
+
+donde $\mu(X,a) := \mathbb{E}[R|X,A=a]$ es la recompensa esperada condicionada al contexto  
+$X \in \mathcal{X}$ y a la acción $A=a$, y $\Delta(\mathcal{A})$ es el conjunto de distribuciones de probabilidad sobre el espacio de acciones $\mathcal{A}$.
+
+## DM (Direct Method)
+
+La contribución individual de cada observación al estimador DM del valor de la política objetivo $\pi$ es:
+$$
+\psi_i^{DM} = \sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}
+$$
+
+donde $\hat{\mu} (X_i,a)$ es un estimador de la función de valor condicional 
+
+$$
+\mu (X_i,a) = \mathbb{E}[R|X_i,A_i=a]
+$$
+
+Así, el estimador DM del valor de la política objetivo $\pi$ es:
+
+$$
+\hat{V}_{DM}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{DM} = \frac{1}{n} \sum_{i=1}^{n} \sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}
+$$
+
+**Supuestos:**  
+
+- $\hat{\mu}(X_i,a)$ está definido en el soporte de la política objetivo $\pi$
+
+El sesgo del estimador DM del valor de la política objetivo $\pi$ es:
+
+$$
+\begin{aligned}
+Bias_{DM} &= \mathbb{E}[\hat{V}_{DM}^{\pi}] - V^{\pi} \\
+&= 
+\mathbb{E}[\frac{1}{n} \sum_{i=1}^{n} \sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&= 
+\frac{1}{n} \sum_{i=1}^{n} \mathbb{E}[\sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&= 
+\mathbb{E}_X[\sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&= 
+\mathbb{E}_X[\sum_a {\pi (a|X) \cdot (\hat{\mu} (X,a) - \mu (X,a))}]
+\end{aligned}
+$$
+
+Así, el sesgo del estimador DM del valor de la política objetivo $\pi$ es cero si y solo si  
+$$
+\hat{\mu} (X,a) = \mu (X,a)
+$$
+para todo $a$ en el soporte de la política objetivo $\pi$.
+
+
+## IPS (Inverse Propensity Score)
+
+Contribución individual por observación al estimador IPS del valor de la política objetivo $\pi$:
+$$
+\psi_i^{IPS} = \frac{\pi(A_i|X_i)}{b(A_i|X_i)} \cdot R_i
+$$
+
+Estimador IPS del valor de la política objetivo $\pi$:
+$$
+\hat{V}_{IPS}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{IPS}
+$$
+
+**Supuestos:**  
+
+- Positividad: $\pi(a|x) > 0 \implies b(a|x) > 0$
+
+
+El sesgo del estimador IPS del valor de la política objetivo $\pi$ es:
+
+\begin{aligned}
+Bias_{IPS} &= \mathbb{E}[\hat{V}_{IPS}^{\pi}] - V^{\pi} \\
+&=
+\mathbb{E}_X[\mathbb{E}[\hat{V}_{IPS}^{\pi}|X]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\mathbb{E}[\frac{1}{n} \sum_{i=1}^{n} \frac{\pi(A_i|X)}{b(A_i|X)} \cdot R_i|X]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\frac{1}{n} \sum_{i=1}^{n} \mathbb{E}[\frac{\pi(A_i|X)}{b(A_i|X)} \cdot R_i|X]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\mathbb{E}[\frac{\pi(A|X)}{b(A|X)} \cdot R|X]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\sum_a P(A=a|X) \cdot \mathbb{E}[\frac{\pi(A|X)}{b(A|X)} \cdot R|X, A=a]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\sum_a b(a|X) \cdot \frac{\pi(a|X)}{b(a|X)} \cdot \mathbb{E}[R|X, A=a]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&= 0
+
+\end{aligned}
+
+
+Si no se conoce $b$, y se estima como $\hat{b}$, el sesgo del estimador IPS del valor de la política objetivo $\pi$ es:
+
+\begin{aligned}
+Bias_{IPS} = ... &= \mathbb{E}_X[\sum_a b(a|X) \cdot \frac{\pi(a|X)}{\hat{b}(a|X)} \cdot \mathbb{E}[R|X, A=a]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\sum_a \pi(a|X) \cdot \frac{b(a|X)}{\hat{b}(a|X)} \cdot \mu(X,a)] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\sum_a \pi(a|X) \cdot (\frac{b(a|X)}{\hat{b}(a|X)} -1) \cdot \mu(X,a)] \\
+
+\end{aligned}
+
+con lo cual el sesgo del estimador IPS del valor de la política objetivo $\pi$ es cero si y solo si
+$$
+\frac{b(a|X)}{\hat{b}(a|X)} = 1 \iff \hat{b}(a|X) = b(a|X) 
+$$
+
+para todo $a$ en el soporte de la política objetivo $\pi$.
+
+## SNIPS (Self-Normalized IPS)
+
+Contribución individual por observación al estimador SNIPS del valor de la política objetivo $\pi$:
+$$
+\psi_i^{SNIPS} = \frac{W_i \cdot R_i}{\frac{1}{n}\sum_{i=1}^{n} W_i} 
+ \quad , \quad W_i \,= \; \frac{\pi(A_i|X_i)}{b(A_i|X_i)}
+$$
+
+En este caso, el factor de normalización $\frac{1}{n}$ se cancela en numerador y denominador, y por tanto, el estimador SNIPS del valor de la política objetivo $\pi$ es:
+
+$$
+\hat{V}_{SNIPS}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{SNIPS} = \frac{\sum_{i=1}^{n} W_i R_i}{\sum_{i=1}^{n} W_i}
+$$
+
+**Supuestos:**  
+
+- Positividad: $\pi(a|x) > 0 \implies b(a|x) > 0$
+
+
+En tal caso, se cumple 
+
+\begin{aligned}
+\mathbb{E}[\frac{\pi(A|X)}{b(A|X)} | X] &= \sum_a P(A=a|X) \cdot \frac{\pi(a|X)}{b(a|X)} \\
+&= 
+\sum_a b(a|X) \cdot \frac{\pi(a|X)}{b(a|X)} \\
+&= \sum_a \pi(a|X) \\ 
+&= 1
+\end{aligned}
+
+Por tanto,
+
+$$
+\mathbb{E}[\frac{\pi(A|X)}{b(A|X)}] = \mathbb{E}_X[\mathbb{E}[\frac{\pi(A|X)}{b(A|X)} | X]] = \mathbb{E}_X[1] = 1
+$$
+
+
+Sin embargo, tanto numerador como denominador del estimador SNIPS son variables aleatorias correlacionadas, y por tanto, en general
+
+$$
+\mathbb{E}[\frac{\sum_i W_i R_i}{\sum_i W_i}] \neq \frac{\mathbb{E}[\sum_i W_i R_i]}{\mathbb{E}[\sum_i W_i]}
+$$
+
+Además, como
+
+$$
+\begin{aligned}
+\mathbb{E}[\sum_i W_i R_i] &= n \cdot \mathbb{E}[\frac{\pi(A|X)}{b(A|X)} \cdot R] \\
+&= 
+n \cdot \mathbb{E}[\psi^{IPS}] \\
+&= 
+n \cdot \mathbb{E}[\frac{1}{n} \sum_{i=1}^{n} \psi_i^{IPS}] \\
+&=
+n \cdot \mathbb{E}[\hat{V}_{IPS}^{\pi}] \\ 
+&=  
+n \cdot V^{\pi}
+\end{aligned}
+$$
+
+y \ $\mathbb{E}[\sum_i W_i] = n \cdot \mathbb{E}[\frac{\pi(A|X)}{b(A|X)}] = n$, en general se tiene que
+
+$$
+\mathbb{E}[\frac{\sum_i W_i R_i}{\sum_i W_i}] \neq \frac{\mathbb{E}[\sum_i W_i R_i]}{\mathbb{E}[\sum_i W_i]} = \frac{n \cdot V^{\pi}}{n} = V^{\pi}
+$$
+
+Por la Ley Débil de los Grandes Números, el estimador SNIPS es consistente, pero en general sesgado:
+
+$$
+\frac{1}{n} \sum_{i=1}^{n} W_i R_i \xrightarrow{p} V^{\pi}
+$$
+
+$$
+\frac{1}{n} \sum_{i=1}^{n} W_i \xrightarrow{p} 1
+$$
+
+y como el cociente es una función continua, por el Teorema de Slutsky se tiene que
+
+$$
+\frac{\frac{1}{n} \sum_{i=1}^{n} W_i R_i}{\frac{1}{n} \sum_{i=1}^{n} W_i} \xrightarrow{p} V^{\pi}
+$$
+
+## DR (Doubly Robust)
+
+Contribución individual por observación al estimador DR del valor de la política objetivo $\pi$:
+$$
+\psi_i^{DR} = \frac{\pi(A_i|X_i)}{b(A_i|X_i)} \cdot (R_i - \hat{\mu} (X_i,A_i)) \, + \, \sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}
+$$
+
+Estimador DR del valor de la política objetivo $\pi$:
+$$
+\hat{V}_{DR}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{DR}
+$$
+
+**Supuestos:**  
+
+- $\hat{\mu}(X_i,a)$ está definido en el soporte de la política objetivo $\pi$  
+- Positividad: $\pi(a|x) > 0 \implies b(a|x) > 0$
+
+Supuesto desconocido también $b(a|x)$, y estimado mediante $\hat{b}(a|x)$, el sesgo del estimador DR del valor de la política objetivo $\pi$ es:
+
+\begin{aligned}
+
+Bias_{DR} &= \mathbb{E}[\hat{V}_{DR}^{\pi}] - V^{\pi} \\
+&=
+\mathbb{E}_X[\mathbb{E}[\hat{V}_{DR}^{\pi}|X]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\mathbb{E} [\frac{1}{n} \sum_{i=1}^{n} \frac{\pi(A_i|X)}{\hat{b}(A_i|X)} \cdot (R_i - \hat{\mu} (X,A_i)) + \sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}|X]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\mathbb{E} [\frac{\pi(A|X)}{\hat{b}(A|X)} \cdot (R - \hat{\mu} (X,A)) + \sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}|X]] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\sum_a P(A=a|X) \cdot \frac{\pi(a|X)}{\hat{b}(a|X)} \cdot\mathbb{E} [ (R - \hat{\mu} (X,a))|X, A=a] + \sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\sum_a \pi(a|X) \cdot \frac{b(a|X)}{\hat{b}(a|X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}] - \mathbb{E}_X[\sum_a \pi(a|X) \cdot \mu(X,a)] \\
+&=
+\mathbb{E}_X[\sum_a \pi(a|X) \cdot \frac{b(a|X)}{\hat{b}(a|X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a|X) \cdot (\hat{\mu} (X,a) - \mu(X,a))}]  \\
+&=
+\mathbb{E}_X[\sum_a \pi(a|X) \cdot (1-\frac{b(a|X)}{\hat{b}(a|X)}) \cdot (\hat{\mu} (X,a) - \mu (X,a) ) ]  \\
+
+\end{aligned}
+
+Así, el sesgo del estimador DR del valor de la política objetivo $\pi$ es cero tanto si 
+$$
+\hat{\mu} (x,a) = \mu (x,a)
+$$
+para todo $a$ en el soporte de la política objetivo $\pi$, como si 
+$$
+\hat{b}(a|x) = b(a|x)
+$$
+para todo $a$ en el soporte de la política objetivo $\pi$. De ahí la propiedad de doble robustez.
+
+
+
+# Estudio A - Overlap y divergencia
+
+## Pregunta
+
+
+## Diseño
+
+
+## Resultados
+
+```{python}
+#| echo: false
+import pandas as pd
+df = pd.read_csv("../results/tables/overlap_cuatro_estimadores.csv")
+df 
+```
+
+\
+
+```{python}
+#| echo: false
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots()
+for estimator in df["estimator"].unique():
+    subset = df[df["estimator"] == estimator]
+    ax.errorbar(subset["epsilon"], subset["bias"], yerr=subset["std"], label=estimator, marker="o")
+ax.set_xlabel("epsilon"); ax.set_ylabel("bias"); ax.legend();
+```
+
+
+## Interpretación
+

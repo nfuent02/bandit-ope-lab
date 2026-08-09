@@ -1,5 +1,6 @@
 
 import numpy as np
+import pandas as pd
 
 from ope import dgp, estimators, metrics, theory
 
@@ -8,7 +9,8 @@ SAMPLE_SIZE = 200
 BASE_SEED = 42
 
 oracle_reward_model = dgp.true_mu.copy()
-constant_reward_model = np.full_like(dgp.true_mu, 0.5)
+wrong_reward_model = np.full_like(dgp.true_mu, 0.5)
+wrong_logging_policy = np.full_like(dgp.logging_policy, 0.5)
 
 
 def compute_monte_carlo_values(
@@ -17,7 +19,8 @@ def compute_monte_carlo_values(
     logging_policy, 
     target_policy,
     oracle_reward_model, 
-    constant_reward_model, 
+    wrong_reward_model,
+    wrong_logging_policy,
     base_seed
 ):
 
@@ -27,24 +30,50 @@ def compute_monte_carlo_values(
             target_policy,
             oracle_reward_model,
         ),
-        "DM constant": lambda data: estimators.dm_policy_value(
+        "DM wrong μ": lambda data: estimators.dm_policy_value(
             data,
             target_policy,
-            constant_reward_model,
+            wrong_reward_model,
         ),
-        "IPS": estimators.ips_policy_value,
-        "SNIPS": estimators.snips_policy_value,
-        "DR oracle": lambda data: estimators.dr_policy_value(
+        "IPS correct b": lambda data: estimators.ips_policy_value(
+            data,
+            logging_policy,
+        ),
+        "IPS wrong b": lambda data: estimators.ips_policy_value(
+            data,
+            wrong_logging_policy,
+        ),
+        "SNIPS correct b": lambda data: estimators.snips_policy_value(
+            data,
+            logging_policy,
+        ),
+        "SNIPS wrong b": lambda data: estimators.snips_policy_value(
+            data,
+            wrong_logging_policy,
+        ),
+        "DR correct μ, correct b": lambda data: estimators.dr_policy_value(
             data,
             oracle_reward_model,
             target_policy,
             logging_policy,
         ),
-        "DR constant": lambda data: estimators.dr_policy_value(
+        "DR correct μ, wrong b": lambda data: estimators.dr_policy_value(
             data,
-            constant_reward_model,
+            oracle_reward_model,
+            target_policy,
+            wrong_logging_policy,
+        ),
+        "DR wrong μ, correct b": lambda data: estimators.dr_policy_value(
+            data,
+            wrong_reward_model,
             target_policy,
             logging_policy,
+        ),
+        "DR wrong μ, wrong b": lambda data: estimators.dr_policy_value(
+            data,
+            wrong_reward_model,
+            target_policy,
+            wrong_logging_policy,
         ),
     }
 
@@ -88,7 +117,10 @@ def monte_carlo_statistics(
 
 def main():
 
-    TABLE_WIDTH = 96
+    ESTIMATOR_WIDTH = 26
+    NUMBER_WIDTH = 12
+
+    TABLE_WIDTH = ESTIMATOR_WIDTH + 7 * (NUMBER_WIDTH + 1)
 
     values, true_value = compute_monte_carlo_values(
         number_of_replications=NUMBER_OF_REPLICATIONS,
@@ -96,7 +128,8 @@ def main():
         logging_policy=dgp.logging_policy,
         target_policy=dgp.target_policy,
         oracle_reward_model=oracle_reward_model,
-        constant_reward_model=constant_reward_model,
+        wrong_reward_model=wrong_reward_model,
+        wrong_logging_policy=wrong_logging_policy,
         base_seed=BASE_SEED,
     )
 
@@ -106,6 +139,9 @@ def main():
         SAMPLE_SIZE,
     )
 
+    df = pd.DataFrame(statistics).T
+    df.index.name = "estimator"
+    df.to_csv("results/tables/estimator_comparison.csv")
 
     print("\n" + "=" * TABLE_WIDTH)
     print("ESTIMATOR COMPARISON".center(TABLE_WIDTH))
@@ -118,28 +154,31 @@ def main():
     print("\n" + "-" * TABLE_WIDTH)
 
     print(
-        f"{'Estimator':>12} "
-        f"{'Mean':>10} "
-        f"{'Bias':>11} "
-        f"{'Variance':>12} "
-        f"{'Std':>10} "
-        f"{'MSE':>12} "
-        f"{'Min':>10} "
-        f"{'Max':>10}"
+        f"{'Estimator':<{ESTIMATOR_WIDTH}} "
+        f"{'Mean':^{NUMBER_WIDTH}} "
+        f"{'Bias':^{NUMBER_WIDTH}} "
+        f"{'Variance':>{NUMBER_WIDTH}} "
+        f"{'Std':^{NUMBER_WIDTH}} "
+        f"{'MSE':^{NUMBER_WIDTH}} "
+        f"{'Min':^{NUMBER_WIDTH}} "
+        f"{'Max':^{NUMBER_WIDTH}}"
     )
+
     print("-" * TABLE_WIDTH)
 
     for estimator_name, stats in statistics.items():
         print(
-            f"{estimator_name:<12} "
-            f"{stats['mean']:>12.6f} "
-            f"{stats['bias']:>+11.6f} "
-            f"{stats['variance']:>10.6f} "
-            f"{stats['std']:>12.6f} "
-            f"{stats['mse']:>12.6f} "
-            f"{stats['min']:>10.6f} "
-            f"{stats['max']:>10.6f}"
+            f"{estimator_name:<{ESTIMATOR_WIDTH}} "
+            f"{stats['mean']:>{NUMBER_WIDTH}.6f} "
+            f"{stats['bias']:>+{NUMBER_WIDTH}.6f} "
+            f"{stats['variance']:>{NUMBER_WIDTH}.6f} "
+            f"{stats['std']:>{NUMBER_WIDTH}.6f} "
+            f"{stats['mse']:>{NUMBER_WIDTH}.6f} "
+            f"{stats['min']:>{NUMBER_WIDTH}.6f} "
+            f"{stats['max']:>{NUMBER_WIDTH}.6f}"
         )
+
+    print("=" * TABLE_WIDTH)
 
 if __name__ == "__main__":
     main()

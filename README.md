@@ -47,7 +47,7 @@ This repository is under active development.
 
 A full write-up with experimental results, figures, and interpretation is being prepared in Quarto.
 
-##Motivation
+## Motivation
 
 Off-policy evaluation asks:
 

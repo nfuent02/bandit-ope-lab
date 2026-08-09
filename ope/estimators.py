@@ -13,20 +13,32 @@ def dm_policy_value(data, target_policy, reward_model):
 
     return np.mean(contributions)
 
-def ips_policy_value(data):
+def ips_policy_value(data, target_policy=None, estimated_logging_policy=None):
     r = [observation["ri"] for observation in data]
     propensity = [observation["logprob"] for observation in data]
-    target_action_prob = [observation["targetprob"] for observation in data]
-    importance_weights = np.array(target_action_prob) / np.array(propensity)
 
+    if target_policy is None:
+        target_action_prob = [observation["targetprob"] for observation in data]
+    else:
+        x = [observation["xi"] for observation in data]
+        a = [observation["ai"] for observation in data]
+        target_action_prob = [target_policy[xi, ai] for xi, ai in zip(x, a)]
+
+    importance_weights = np.array(target_action_prob) / np.array(propensity) if estimated_logging_policy is None else np.array(target_action_prob) / np.array([estimated_logging_policy[observation["xi"], observation["ai"]] for observation in data])
     return np.mean(importance_weights * r)
 
-def snips_policy_value(data):
+def snips_policy_value(data, target_policy=None, estimated_logging_policy=None):
     r = [observation["ri"] for observation in data]
     propensity = [observation["logprob"] for observation in data]
-    target_action_prob = [observation["targetprob"] for observation in data]
+    
+    if target_policy is None:
+        target_action_prob = [observation["targetprob"] for observation in data]
+    else:
+        x = [observation["xi"] for observation in data]
+        a = [observation["ai"] for observation in data]
+        target_action_prob = [target_policy[xi, ai] for xi, ai in zip(x, a)]
 
-    importance_weights = np.array(target_action_prob) / np.array(propensity)
+    importance_weights = np.array(target_action_prob) / np.array(propensity) if estimated_logging_policy is None else np.array(target_action_prob) / np.array([estimated_logging_policy[observation["xi"], observation["ai"]] for observation in data]) 
     normalized_weights = importance_weights / np.mean(importance_weights)
 
     return np.mean(normalized_weights * r)

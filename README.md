@@ -69,3 +69,6 @@ The report can then be rendered with Quarto:
 ```bash
 quarto render docs/report_en.qmd
 ```
+
+
+Tested with Python 3.14.2

@@ -1,58 +1,71 @@
 # Contextual Bandits OPE Lab
 
-> Work in progress — Summer 2026
+An empirical study of **off-policy evaluation (OPE)** in contextual bandits, focused on understanding when and why four classical estimators succeed or fail:
 
-An empirical study of **off-policy evaluation (OPE)** in contextual bandits.
+- Direct Method (DM)
+- Inverse Propensity Scoring (IPS)
+- Self-Normalized IPS (SNIPS)
+- Doubly Robust (DR)
 
-The project investigates when and why common OPE estimators fail as a function of:
+The project uses a controlled synthetic environment in which the true policy value is known exactly, allowing Monte Carlo behavior to be compared against theoretical bias, variance, and mean squared error.
 
-- sample size,
-- policy overlap,
-- propensity estimation,
-- reward-model misspecification.
+## Questions studied
 
-The main estimators studied are:
+The experiments isolate four failure mechanisms:
 
-- **Direct Method (DM)**
-- **Inverse Propensity Scoring (IPS)**
-- **Self-Normalized IPS (SNIPS)**
-- **Doubly Robust (DR)**
+1. **Weak overlap:** what happens as logging propensities become small?
+2. **Nuisance-model misspecification:** how do errors in the reward and propensity models affect DM, IPS, SNIPS, and DR?
+3. **Positivity violation:** what changes when the target policy assigns probability to actions that are never observed under the logging policy?
+4. **Policy shift:** what happens as the target policy moves progressively away from a fixed logging policy?
 
-## What this repository contains
+## Main findings
 
-The project is built around a controlled synthetic contextual-bandit environment where the true policy value is known exactly. This makes it possible to compare Monte Carlo behavior against theoretical quantities such as bias, variance, and mean squared error.
+- **Weak overlap is primarily a variance problem as long as positivity still holds.**  
+Importance-weighted estimators become unstable as probability ratios grow.
 
-Current experiments include:
+- **Misspecification affects the estimators differently.**
+DM relies on the reward model, IPS and SNIPS rely on logging propensities, while DR retains its double-robustness guarantee when at least one nuisance model is correctly specified.
 
-- validation of the synthetic data-generating process,
-- sample-size scaling,
-- overlap deterioration,
-- empirical verification of double robustness,
-- estimation of reward and propensity nuisance models.
+- **Positivity failure is qualitatively different from weak overlap.**
+The target policy value can cease to be identified from the observable logged-data distribution.
 
-The goal is not only to implement the estimators, but to understand their **failure modes and bias–variance trade-offs** under controlled violations of their assumptions.
+- **Policy shift can increase variance even when the logging policy and its
+  support remain fixed**, through increased dispersion of importance weights.
+
+- **No estimator dominates universally.**
+Their behavior reflects different trade-offs between modeling assumptions, importance weighting, bias, and variance.
+
+## Report
+
+The full analysis, including theoretical derivations, Monte Carlo experiments,
+figures, and interpretation, is available here:
+
+- English: HTML · PDF
+- Spanish: HTML · PDF
 
 ## Repository structure
 
 ```text
-ope/            Core data-generating process, estimators, and theory
-experiments/    Reproducible simulation experiments
+ope/            Core DGP, estimators, theory, metrics, and nuisance models
+experiments/    Reproducible Monte Carlo experiments
 results/        Generated tables and figures
-docs/           Quarto report and analysis
+docs/           Quarto reports and bibliography
+tests/          Sanity and regression tests
 ```
 
-## Status
+## Reproducing the experiments
 
-This repository is under active development.
+The four main experiments can be run from the repository root:
 
-A full write-up with experimental results, figures, and interpretation is being prepared in Quarto.
+```bash
+python experiments/02_overlap.py
+python experiments/04_double_robustness_grid.py
+python experiments/06_positivity_violation.py
+python experiments/07_policy_shift.py
+```
 
-## Motivation
+The report can then be rendered with Quarto:
 
-Off-policy evaluation asks:
-
-> How well would a target policy have performed if we had deployed it, given only data collected under a different policy?
-
-This problem appears in contextual bandits, recommender systems, experimentation, and sequential decision-making.
-
-The project serves as a focused empirical study of the statistical foundations of OPE and as preparation for further work on contextual bandits.
+```bash
+quarto render docs/report_en.qmd
+```

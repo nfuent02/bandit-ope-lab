@@ -30,46 +30,50 @@ def compute_monte_carlo_values(
             target_policy,
             oracle_reward_model,
         ),
-        "DM wrong μ": lambda data: estimators.dm_policy_value(
+        "DM wrong mu": lambda data: estimators.dm_policy_value(
             data,
             target_policy,
             wrong_reward_model,
         ),
         "IPS correct b": lambda data: estimators.ips_policy_value(
             data,
+            target_policy,
             logging_policy,
         ),
         "IPS wrong b": lambda data: estimators.ips_policy_value(
             data,
+            target_policy,
             wrong_logging_policy,
         ),
         "SNIPS correct b": lambda data: estimators.snips_policy_value(
             data,
+            target_policy,
             logging_policy,
         ),
         "SNIPS wrong b": lambda data: estimators.snips_policy_value(
             data,
+            target_policy,
             wrong_logging_policy,
         ),
-        "DR correct μ, correct b": lambda data: estimators.dr_policy_value(
+        "DR correct mu, correct b": lambda data: estimators.dr_policy_value(
             data,
             oracle_reward_model,
             target_policy,
             logging_policy,
         ),
-        "DR correct μ, wrong b": lambda data: estimators.dr_policy_value(
+        "DR correct mu, wrong b": lambda data: estimators.dr_policy_value(
             data,
             oracle_reward_model,
             target_policy,
             wrong_logging_policy,
         ),
-        "DR wrong μ, correct b": lambda data: estimators.dr_policy_value(
+        "DR wrong mu, correct b": lambda data: estimators.dr_policy_value(
             data,
             wrong_reward_model,
             target_policy,
             logging_policy,
         ),
-        "DR wrong μ, wrong b": lambda data: estimators.dr_policy_value(
+        "DR wrong mu, wrong b": lambda data: estimators.dr_policy_value(
             data,
             wrong_reward_model,
             target_policy,

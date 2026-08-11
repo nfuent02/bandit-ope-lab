@@ -8,7 +8,7 @@
 
 <meta name="author" content="Noé Fuentes">
 
-<title>Anatomía empírica de estimadores de Offline Policy Evaluation (OPE)</title>
+<title>Anatomía empírica de estimadores de Off-Policy Evaluation (OPE)</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -114,7 +114,7 @@ window.Quarto = {
   <li><a href="#estimadores" id="toc-estimadores" class="nav-link" data-scroll-target="#estimadores"><span class="header-section-number">2</span> Estimadores</a>
   <ul class="collapse">
   <li><a href="#dm-direct-method" id="toc-dm-direct-method" class="nav-link" data-scroll-target="#dm-direct-method"><span class="header-section-number">2.1</span> DM (Direct Method)</a></li>
-  <li><a href="#ips-inverse-propensity-score" id="toc-ips-inverse-propensity-score" class="nav-link" data-scroll-target="#ips-inverse-propensity-score"><span class="header-section-number">2.2</span> IPS (Inverse Propensity Score)</a></li>
+  <li><a href="#ips-inverse-propensity-scoring" id="toc-ips-inverse-propensity-scoring" class="nav-link" data-scroll-target="#ips-inverse-propensity-scoring"><span class="header-section-number">2.2</span> IPS (Inverse Propensity Scoring)</a></li>
   <li><a href="#snips-self-normalized-ips" id="toc-snips-self-normalized-ips" class="nav-link" data-scroll-target="#snips-self-normalized-ips"><span class="header-section-number">2.3</span> SNIPS (Self-Normalized IPS)</a></li>
   <li><a href="#dr-doubly-robust" id="toc-dr-doubly-robust" class="nav-link" data-scroll-target="#dr-doubly-robust"><span class="header-section-number">2.4</span> DR (Doubly Robust)</a></li>
   <li><a href="#nota" id="toc-nota" class="nav-link" data-scroll-target="#nota"><span class="header-section-number">2.5</span> Nota</a></li>
@@ -141,7 +141,7 @@ window.Quarto = {
   </ul></li>
   <li><a href="#interpretación-1" id="toc-interpretación-1" class="nav-link" data-scroll-target="#interpretación-1"><span class="header-section-number">5.4</span> Interpretación</a></li>
   </ul></li>
-  <li><a href="#estudio-c---violación-de-positividad" id="toc-estudio-c---violación-de-positividad" class="nav-link" data-scroll-target="#estudio-c---violación-de-positividad"><span class="header-section-number">6</span> Estudio C - Violación de positividad</a>
+  <li><a href="#estudio-c---violación-de-positivity" id="toc-estudio-c---violación-de-positivity" class="nav-link" data-scroll-target="#estudio-c---violación-de-positivity"><span class="header-section-number">6</span> Estudio C - Violación de positivity</a>
   <ul class="collapse">
   <li><a href="#pregunta-2" id="toc-pregunta-2" class="nav-link" data-scroll-target="#pregunta-2"><span class="header-section-number">6.1</span> Pregunta</a></li>
   <li><a href="#diseño-2" id="toc-diseño-2" class="nav-link" data-scroll-target="#diseño-2"><span class="header-section-number">6.2</span> Diseño</a></li>
@@ -158,14 +158,15 @@ window.Quarto = {
   <li><a href="#síntesis-y-discusión" id="toc-síntesis-y-discusión" class="nav-link" data-scroll-target="#síntesis-y-discusión"><span class="header-section-number">8</span> Síntesis y discusión</a></li>
   <li><a href="#limitaciones" id="toc-limitaciones" class="nav-link" data-scroll-target="#limitaciones"><span class="header-section-number">9</span> Limitaciones</a></li>
   <li><a href="#conclusión" id="toc-conclusión" class="nav-link" data-scroll-target="#conclusión"><span class="header-section-number">10</span> Conclusión</a></li>
+  <li><a href="#referencias" id="toc-referencias" class="nav-link" data-scroll-target="#referencias">Referencias</a></li>
   </ul>
-</nav>
+<div class="quarto-alternate-formats"><h2>Otros formatos</h2><ul><li><a href="report.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
 </div>
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Anatomía empírica de estimadores de Offline Policy Evaluation (OPE)</h1>
+<h1 class="title">Anatomía empírica de estimadores de Off-Policy Evaluation (OPE)</h1>
 </div>
 
 
@@ -194,12 +195,13 @@ window.Quarto = {
 </header>
 
 
+<div style="page-break-after: always;"></div>
 <section id="introducción" class="level1" data-number="1">
 <h1 data-number="1"><span class="header-section-number">1</span> Introducción</h1>
 <section id="motivación" class="level2" data-number="1.1">
 <h2 data-number="1.1" class="anchored" data-anchor-id="motivación"><span class="header-section-number">1.1</span> Motivación</h2>
 <p>En muchos problemas de decisión, tenemos una política que selecciona una acción en función de la información disponible sobre cada individuo o situación. En un contextual bandit, esta información se representa mediante un contexto <span class="math inline">\(X\)</span>, a partir del cual se selecciona una acción <span class="math inline">\(A\)</span> y posteriormente se observa una recompensa <span class="math inline">\(R\)</span>.</p>
-<p>Una cuestión habitual consiste en evaluar una nueva política antes de desplegarla. La forma más directa de hacerlo sería ejecutarla y observar las recompensas obtenidas, pero esto puede ser costoso, lento o arriesgado. La evaluación offline de políticas (<em>Off-Policy Evaluation</em>, OPE) busca estimar el valor de una política objetivo utilizando datos recogidos previamente por otra política <span class="citation" data-cites="li2011 dudik2011">(<a href="#ref-li2011" role="doc-biblioref">Li et&nbsp;al. 2011</a>; <a href="#ref-dudik2011" role="doc-biblioref">Dudík et&nbsp;al. 2011</a>)</span>.</p>
+<p>Una cuestión habitual consiste en evaluar una nueva política antes de desplegarla. La forma más directa de hacerlo sería ejecutarla y observar las recompensas obtenidas, pero esto puede ser costoso, lento o arriesgado. La evaluación offline de políticas (<em>Off-Policy Evaluation</em>, OPE) busca estimar el valor de una target policy utilizando datos recogidos previamente por otra política <span class="citation" data-cites="li2011 dudik2011">(<a href="#ref-li2011" role="doc-biblioref">Li et&nbsp;al. 2011</a>; <a href="#ref-dudik2011" role="doc-biblioref">Dudík et&nbsp;al. 2011</a>)</span>.</p>
 <p>El problema aparece, por ejemplo, en sistemas de recomendación, publicidad online o experimentación adaptativa, donde pueden existir grandes cantidades de interacciones registradas pero resulta indeseable desplegar cada nueva política únicamente para conocer su rendimiento.</p>
 </section>
 <section id="planteamiento-del-problema" class="level2" data-number="1.2">
@@ -252,7 +254,7 @@ D=\{(X_i,A_i,R_i)\}_{i=1}^n
 <section id="dificultades" class="level2" data-number="1.3">
 <h2 data-number="1.3" class="anchored" data-anchor-id="dificultades"><span class="header-section-number">1.3</span> Dificultades</h2>
 <p>La posibilidad y la precisión de la evaluación offline dependen de varios mecanismos distintos.</p>
-<p>En primer lugar, algunos estimadores dependen de la función de recompensa condicional <span class="math inline">\(\mu(x,a)\)</span> y otros de las propensiones de la logging policy <span class="math inline">\(b(a \mid x)\)</span>. En la práctica, estas cantidades pueden ser desconocidas y sustituirse por estimaciones <span class="math inline">\(\hat{\mu}\)</span> y <span class="math inline">\(\hat{b}\)</span>. La misspecification de estos nuisance models puede entonces introducir sesgo o eliminar garantías de consistencia.</p>
+<p>En primer lugar, algunos estimadores dependen de la función de recompensa condicional <span class="math inline">\(\mu(x,a)\)</span> y otros de las propensities de la logging policy <span class="math inline">\(b(a \mid x)\)</span>. En la práctica, estas cantidades pueden ser desconocidas y sustituirse por estimaciones <span class="math inline">\(\hat{\mu}\)</span> y <span class="math inline">\(\hat{b}\)</span>. La misspecification de estos nuisance models puede entonces introducir sesgo o eliminar garantías de consistencia.</p>
 <p>En segundo lugar, los estimadores basados en importance weighting utilizan ratios de la forma</p>
 <p><span class="math display">\[
 w(x,a)
@@ -275,16 +277,17 @@ b(a \mid x)&gt;0
 <blockquote class="blockquote">
 <p><strong>¿Cuándo y por qué fallan DM, IPS, SNIPS y DR al evaluar offline políticas de contextual bandits, en función de la especificación de los nuisance models, el overlap entre políticas, el policy shift y la falta de positivity?</strong></p>
 </blockquote>
-<p>Para responderla se construye un laboratorio sintético deliberadamente pequeño en el que se conocen exactamente <span class="math inline">\(P_X\)</span>, <span class="math inline">\(\mu\)</span>, <span class="math inline">\(b\)</span> y <span class="math inline">\(\pi\)</span>. Esto permite conocer <span class="math inline">\(V(\pi)\)</span> de forma exacta y modificar de manera controlada los mecanismos de interés, comparando las predicciones teóricas con resultados Monte Carlo.</p>
+<p>Para responderla se construye un laboratorio sintético deliberadamente pequeño en el que se conocen exactamente <span class="math inline">\(P_X\)</span>, <span class="math inline">\(\mu\)</span>, <span class="math inline">\(b\)</span> y <span class="math inline">\(\pi\)</span>. Esto permite conocer <span class="math inline">\(V^{\pi}\)</span> de forma exacta y modificar de manera controlada los mecanismos de interés, comparando las predicciones teóricas con resultados Monte Carlo.</p>
+<div style="page-break-after: always;"></div>
 </section>
 </section>
 <section id="estimadores" class="level1" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> Estimadores</h1>
-<p>Los cuatro estimadores estudiados representan estrategias distintas para reconstruir el valor contrafactual de la target policy a partir de bandit feedback. DM sustituye las recompensas no observadas por predicciones de un reward model; IPS evita modelar las recompensas y repondera las observaciones mediante las propensiones; SNIPS normaliza esos mismos pesos para estabilizar la estimación; y DR combina un baseline basado en el reward model con una corrección residual mediante importance weighting. Esta descomposición será útil posteriormente, ya que los distintos mecanismos mediante los cuales los anteriores estimadores fallan afectan de forma diferente a cada componente.</p>
+<p>Los cuatro estimadores estudiados representan estrategias distintas para reconstruir el valor contrafactual de la target policy a partir de bandit feedback. DM sustituye las recompensas no observadas por predicciones de un reward model; IPS evita modelar las recompensas y repondera las observaciones mediante las propensities; SNIPS normaliza esos mismos pesos para estabilizar la estimación; y DR combina un baseline basado en el reward model con una corrección residual mediante importance weighting. Esta descomposición será útil posteriormente, ya que los distintos mecanismos mediante los cuales los anteriores estimadores fallan afectan de forma diferente a cada componente.</p>
 <section id="dm-direct-method" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="dm-direct-method"><span class="header-section-number">2.1</span> DM (Direct Method)</h2>
-<p>La idea de DM es estimar primero qué recompensa produciría cada acción en cada contexto mediante <span class="math inline">\(\hat{\mu}(x,a)\)</span>, y después promediar esas predicciones según las probabilidades de la target policy. De este modo, una vez fijado el reward model, la evaluación no utiliza importance weights ni depende directamente de las propensiones de la logging policy.</p>
-<p>La contribución individual de cada observación al estimador DM del valor de la política objetivo <span class="math inline">\(\pi\)</span> es: <span class="math display">\[
+<p>La idea de DM es estimar primero qué recompensa produciría cada acción en cada contexto mediante <span class="math inline">\(\hat{\mu}(x,a)\)</span>, y después promediar esas predicciones según las probabilidades de la target policy.</p>
+<p>La contribución individual de cada observación al estimador DM del valor de la target policy <span class="math inline">\(\pi\)</span> es: <span class="math display">\[
 \psi_i^{DM} = \sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}
 \]</span></p>
 <p>donde <span class="math inline">\(\hat{\mu} (X_i,a)\)</span> es un estimador de la función de valor condicional</p>
@@ -292,18 +295,18 @@ b(a \mid x)&gt;0
 \mu (X_i,a) = \mathbb{E}[R \mid X_i,A_i=a]
 \]</span></p>
 <p><span class="citation" data-cites="dudik2011">(<a href="#ref-dudik2011" role="doc-biblioref">Dudík et&nbsp;al. 2011</a>)</span>.</p>
-<p>Así, el estimador DM del valor de la política objetivo <span class="math inline">\(\pi\)</span> es:</p>
+<p>Así, el estimador DM del valor de la target policy <span class="math inline">\(\pi\)</span> es:</p>
 <p><span class="math display">\[
 \hat{V}_{DM}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{DM} = \frac{1}{n} \sum_{i=1}^{n} \sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}
 \]</span></p>
 <p><strong>Supuestos:</strong></p>
 <ul>
-<li><span class="math inline">\(\hat{\mu}(X_i,a)\)</span> está definido en el soporte de la política objetivo <span class="math inline">\(\pi\)</span></li>
+<li><span class="math inline">\(\hat{\mu}(X_i,a)\)</span> está definido en el soporte de la target policy <span class="math inline">\(\pi\)</span></li>
 </ul>
-<p>El sesgo del estimador DM del valor de la política objetivo <span class="math inline">\(\pi\)</span> es:</p>
-<p><span class="math display">\[
-\begin{aligned}
-Bias_{DM} &amp;= \mathbb{E}\left[\hat{V}_{DM}^{\pi}\right] - V^{\pi} \\
+<div style="page-break-after: always;"></div>
+<p>El sesgo del estimador DM del valor de la target policy <span class="math inline">\(\pi\)</span> es:</p>
+<p><span class="math display">\[\begin{align*}
+\operatorname{Bias}_{DM} &amp;= \mathbb{E}\left[\hat{V}_{DM}^{\pi}\right] - V^{\pi} \\
 &amp;=
 \mathbb{E}\left[\frac{1}{n} \sum_{i=1}^{n} \sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
@@ -312,29 +315,32 @@ Bias_{DM} &amp;= \mathbb{E}\left[\hat{V}_{DM}^{\pi}\right] - V^{\pi} \\
 \mathbb{E}_X\left[\sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
 \mathbb{E}_X\left[\sum_a {\pi (a \mid X) \cdot (\hat{\mu} (X,a) - \mu (X,a))}\right]
-\end{aligned}
-\]</span></p>
-<p>Así, el sesgo del estimador DM del valor de la política objetivo <span class="math inline">\(\pi\)</span> es cero si <span class="math display">\[
+\end{align*}\]</span></p>
+<p><br>
+</p>
+<p>Así, el sesgo del estimador DM del valor de la target policy <span class="math inline">\(\pi\)</span> es cero si <span class="math display">\[
 \hat{\mu} (X,a) = \mu (X,a)
-\]</span> para todo <span class="math inline">\(a\)</span> en el soporte de la política objetivo <span class="math inline">\(\pi\)</span>.</p>
+\]</span> para todo <span class="math inline">\(a\)</span> en el soporte de la target policy <span class="math inline">\(\pi\)</span>.</p>
 </section>
-<section id="ips-inverse-propensity-score" class="level2" data-number="2.2">
-<h2 data-number="2.2" class="anchored" data-anchor-id="ips-inverse-propensity-score"><span class="header-section-number">2.2</span> IPS (Inverse Propensity Score)</h2>
+<section id="ips-inverse-propensity-scoring" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="ips-inverse-propensity-scoring"><span class="header-section-number">2.2</span> IPS (Inverse Propensity Scoring)</h2>
+<p>IPS sigue la estrategia opuesta: no intenta modelar las recompensas contrafactuales, sino que utiliza las recompensas realmente observadas y corrige la diferencia entre logging y target mediante importance weights. Una observación recibe más peso cuanto más probable es su acción bajo π en relación con b.</p>
 <p>El estimador IPS es una aplicación del principio de reponderación de Horvitz-Thompson al problema de evaluación off-policy <span class="citation" data-cites="horvitz1952 wang2017">(<a href="#ref-horvitz1952" role="doc-biblioref">Horvitz y Thompson 1952</a>; <a href="#ref-wang2017" role="doc-biblioref">Wang et&nbsp;al. 2017</a>)</span>.</p>
-<p>La contribución individual por observación al estimador IPS del valor de la política objetivo <span class="math inline">\(\pi\)</span> es: <span class="math display">\[
+<p>La contribución individual por observación al estimador IPS del valor de la target policy <span class="math inline">\(\pi\)</span> es: <span class="math display">\[
 \psi_i^{IPS} = \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)} \cdot R_i
 \]</span></p>
-<p>Estimador IPS del valor de la política objetivo <span class="math inline">\(\pi\)</span>: <span class="math display">\[
+<p>Estimador IPS del valor de la target policy <span class="math inline">\(\pi\)</span>: <span class="math display">\[
 \hat{V}_{IPS}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{IPS}
 \]</span></p>
-<p><span class="citation" data-cites="li2011">(<a href="#ref-li2011" role="doc-biblioref">Li et&nbsp;al. 2011</a>)</span>.</p>
 <p><strong>Supuestos:</strong></p>
 <ul>
-<li>Positividad: <span class="math inline">\(\pi(a \mid x) &gt; 0 \implies b(a \mid x) &gt; 0\)</span></li>
+<li>Positivity: <span class="math inline">\(\pi(a \mid x) &gt; 0 \implies b(a \mid x) &gt; 0\)</span></li>
 </ul>
-<p>El sesgo del estimador IPS del valor de la política objetivo <span class="math inline">\(\pi\)</span> es:</p>
-<span class="math display">\[\begin{aligned}
-Bias_{IPS} &amp;= \mathbb{E}\left[\hat{V}_{IPS}^{\pi}\right] - V^{\pi} \\
+<p><br>
+</p>
+<p>El sesgo del estimador IPS del valor de la target policy <span class="math inline">\(\pi\)</span> es:</p>
+<p><span class="math display">\[\begin{align*}
+\operatorname{Bias}_{IPS} &amp;= \mathbb{E}\left[\hat{V}_{IPS}^{\pi}\right] - V^{\pi} \\
 &amp;=
 \mathbb{E}_X\left[\mathbb{E}\left[\hat{V}_{IPS}^{\pi}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
@@ -350,21 +356,19 @@ Bias_{IPS} &amp;= \mathbb{E}\left[\hat{V}_{IPS}^{\pi}\right] - V^{\pi} \\
 &amp;=
 \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;= 0
-
-\end{aligned}\]</span>
-<p>Si no se conoce <span class="math inline">\(b\)</span>, y se estima como <span class="math inline">\(\hat{b}\)</span>, el sesgo del estimador IPS del valor de la política objetivo <span class="math inline">\(\pi\)</span> es:</p>
-<span class="math display">\[\begin{aligned}
-Bias_{IPS} = ... &amp;= \mathbb{E}_X\left[\sum_a b(a \mid X) \cdot \frac{\pi(a \mid X)}{\hat{b}(a \mid X)} \cdot \mathbb{E}[R \mid X, A=a]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
+\end{align*}\]</span></p>
+<p>Si no se conoce <span class="math inline">\(b\)</span>, y se estima como <span class="math inline">\(\hat{b}\)</span>, el sesgo del estimador IPS del valor de la target policy <span class="math inline">\(\pi\)</span> es:</p>
+<p><span class="math display">\[\begin{align*}
+\operatorname{Bias}_{IPS} = ... &amp;= \mathbb{E}_X\left[\sum_a b(a \mid X) \cdot \frac{\pi(a \mid X)}{\hat{b}(a \mid X)} \cdot \mathbb{E}[R \mid X, A=a]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
 \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \frac{b(a \mid X)}{\hat{b}(a \mid X)} \cdot \mu(X,a)\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
 \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \left(\frac{b(a \mid X)}{\hat{b}(a \mid X)} -1\right) \cdot \mu(X,a)\right] \\
-
-\end{aligned}\]</span>
-<p>con lo cual el sesgo del estimador IPS del valor de la política objetivo <span class="math inline">\(\pi\)</span> es cero si <span class="math display">\[
+\end{align*}\]</span></p>
+<p>con lo cual el sesgo del estimador IPS del valor de la target policy <span class="math inline">\(\pi\)</span> es cero si <span class="math display">\[
 \frac{b(a \mid X)}{\hat{b}(a \mid X)} = 1 \iff \hat{b}(a \mid X) = b(a \mid X)
 \]</span></p>
-<p>para todo <span class="math inline">\(a\)</span> en el soporte de la política objetivo <span class="math inline">\(\pi\)</span>.</p>
+<p>para todo <span class="math inline">\(a\)</span> en el soporte de la target policy <span class="math inline">\(\pi\)</span>.</p>
 <p>Para hallar su varianza, definimos</p>
 <p><span class="math display">\[
 Z_i = \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)} \cdot R_i
@@ -375,61 +379,65 @@ Z_i = \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)} \cdot R_i
 \]</span></p>
 <p>Como las observaciones son i.i.d.,</p>
 <p><span class="math display">\[
-Var(\hat{V}_{IPS}^{\pi}) = Var\left(\frac{1}{n} \sum_{i=1}^{n} Z_i\right) = \frac{1}{n^2} \sum_{i=1}^{n} Var(Z_i) = \frac{1}{n} Var(Z)
+\operatorname{Var}(\hat{V}_{IPS}^{\pi}) = \operatorname{Var}\left(\frac{1}{n} \sum_{i=1}^{n} Z_i\right) = \frac{1}{n^2} \sum_{i=1}^{n} \operatorname{Var}(Z_i) = \frac{1}{n} \operatorname{Var}(Z)
 \]</span></p>
 <p>Ahora,</p>
 <p><span class="math display">\[
-Var(Z) = \mathbb{E}[Z^2] - \mathbb{E}[Z]^2
+\operatorname{Var}(Z) = \mathbb{E}[Z^2] - \mathbb{E}[Z]^2
 \]</span></p>
-<p>Bajo la logging policy verdadera y la hipótesis de positividad,</p>
+<p>Bajo la logging policy verdadera y la hipótesis de positivity,</p>
 <p><span class="math display">\[
 \mathbb{E} [Z] = \mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} \cdot R\right] = V^{\pi}
 \]</span></p>
 <p>Por tanto, solo hay que calcular <span class="math inline">\(\mathbb{E} [Z^2]\)</span>. Condicionamos primero en X:</p>
-<span class="math display">\[\begin{aligned}
+<p><span class="math display">\[\begin{align*}
 \mathbb{E} [Z^2] &amp;= \mathbb{E}_X\left[\mathbb{E}[Z^2 \mid X]\right] \\
 &amp;= \mathbb{E}_X\left[\sum_a P(A=a \mid X) \cdot \mathbb{E}[Z^2 \mid X, A=a]\right] \\
 &amp;= \mathbb{E}_X\left[\sum_a b(a \mid X) \cdot \mathbb{E}\left[\left(\frac{\pi(A \mid X)}{b(A \mid X)} \cdot R\right)^2 \mid X, A=a\right]\right] \\
 &amp;= \mathbb{E}_X\left[\sum_a b(a \mid X) \cdot \frac{\pi(a \mid X)^2}{b(a \mid X)^2} \cdot \mathbb{E}[R^2 \mid X, A=a]\right] \\
 &amp;= \mathbb{E}_X\left[\sum_a \frac{\pi(a \mid X)^2}{b(a \mid X)} \cdot \mathbb{E}[R^2 \mid X, A=a]\right]
-
-\end{aligned}\]</span>
+\end{align*}\]</span></p>
 <p>Por tanto,</p>
 <p><span class="math display">\[
-Var(\hat{V}_{IPS}^{\pi}) = \frac{1}{N} \left( \mathbb{E}_X\left[\sum_a \frac{\pi(a \mid X)^2}{b(a \mid X)} \cdot \mathbb{E}[R^2 \mid X, A=a]\right] - (V^{\pi})^2 \right)
+\operatorname{Var}(\hat{V}_{IPS}^{\pi}) = \frac{1}{n}\left( \mathbb{E}_X\left[\sum_a \frac{\pi(a \mid X)^2}{b(a \mid X)} \cdot \mathbb{E}[R^2 \mid X, A=a]\right] - (V^{\pi})^2 \right)
 \]</span></p>
-<p>Si <span class="math inline">\(R \mid X=x, A=a ~ Bernoulli(\mu(x,a))\)</span> (como en nuestro DGP), entonces <span class="math inline">\(R^2 = R\)</span>, y por tanto</p>
+<p>Si <span class="math inline">\(R \mid X=x, A=a \sim Bernoulli(\mu(x,a))\)</span> (como en nuestro DGP), entonces <span class="math inline">\(R^2 = R\)</span>, y por tanto</p>
 <p><span class="math display">\[
 \mathbb{E} [R^2 \mid X=x, A=a] = \mathbb{E}[R \mid X=x, A=a] = \mu(x,a)
 \]</span></p>
 <p>Entonces:</p>
 <p><span class="math display">\[
-Var(\hat{V}_{IPS}^{\pi}) = \frac{1}{N} \left( \mathbb{E}_X\left[\sum_a \frac{\pi(a \mid X)^2}{b(a \mid X)} \cdot \mu(X,a)\right] - (V^{\pi})^2 \right)
+\operatorname{Var}(\hat{V}_{IPS}^{\pi}) = \frac{1}{n}\left( \mathbb{E}_X\left[\sum_a \frac{\pi(a \mid X)^2}{b(a \mid X)} \cdot \mu(X,a)\right] - (V^{\pi})^2 \right)
 \]</span></p>
 </section>
 <section id="snips-self-normalized-ips" class="level2" data-number="2.3">
 <h2 data-number="2.3" class="anchored" data-anchor-id="snips-self-normalized-ips"><span class="header-section-number">2.3</span> SNIPS (Self-Normalized IPS)</h2>
-<p>La contribución individual por observación al estimador SNIPS del valor de la política objetivo <span class="math inline">\(\pi\)</span> es: <span class="math display">\[
+<p>SNIPS parte de los mismos importance weights que IPS, pero los normaliza por su media muestral. La normalización busca limitar la influencia de fluctuaciones en la masa total de los pesos y puede estabilizar la varianza, a cambio de convertir el estimador en un cociente y perder la insesgadez exacta en muestra finita.</p>
+<p>La contribución individual por observación al estimador SNIPS del valor de la target policy <span class="math inline">\(\pi\)</span> es: <span class="math display">\[
 \psi_i^{SNIPS} = \frac{W_i \cdot R_i}{\frac{1}{n}\sum_{i=1}^{n} W_i}
 \quad , \quad W_i \,= \; \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)}
 \]</span></p>
-<p>En este caso, el factor de normalización <span class="math inline">\(\frac{1}{n}\)</span> se cancela en numerador y denominador, y por tanto, el estimador SNIPS del valor de la política objetivo <span class="math inline">\(\pi\)</span> es:</p>
+<p>En este caso, el factor de normalización <span class="math inline">\(\frac{1}{n}\)</span> se cancela en numerador y denominador, y por tanto, el estimador SNIPS del valor de la target policy <span class="math inline">\(\pi\)</span> es:</p>
 <p><span class="math display">\[
 \hat{V}_{SNIPS}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{SNIPS} = \frac{\sum_{i=1}^{n} W_i R_i}{\sum_{i=1}^{n} W_i}
 \]</span></p>
 <p><span class="citation" data-cites="swaminathan2015">(<a href="#ref-swaminathan2015" role="doc-biblioref">Swaminathan y Joachims 2015</a>)</span>.</p>
+<p><br>
+</p>
 <p><strong>Supuestos:</strong></p>
 <ul>
-<li>Positividad: <span class="math inline">\(\pi(a \mid x) &gt; 0 \implies b(a \mid x) &gt; 0\)</span></li>
+<li>Positivity: <span class="math inline">\(\pi(a \mid x) &gt; 0 \implies b(a \mid x) &gt; 0\)</span></li>
 </ul>
+<p><br>
+</p>
 <p>En tal caso, se cumple</p>
-<span class="math display">\[\begin{aligned}
+<p><span class="math display">\[\begin{align*}
 \mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} | X\right] &amp;= \sum_a P(A=a \mid X) \cdot \frac{\pi(a \mid X)}{b(a \mid X)} \\
 &amp;=
 \sum_a b(a \mid X) \cdot \frac{\pi(a \mid X)}{b(a \mid X)} \\
 &amp;= \sum_a \pi(a \mid X) \\
 &amp;= 1
-\end{aligned}\]</span>
+\end{align*}\]</span></p>
 <p>Por tanto,</p>
 <p><span class="math display">\[
 \mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)}\right] = \mathbb{E}_X\left[\mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} | X\right]\right] = \mathbb{E}_X[1] = 1
@@ -439,8 +447,7 @@ Var(\hat{V}_{IPS}^{\pi}) = \frac{1}{N} \left( \mathbb{E}_X\left[\sum_a \frac{\pi
 \mathbb{E}\left[\frac{\sum_i W_i R_i}{\sum_i W_i}\right] \neq \frac{\mathbb{E}[\sum_i W_i R_i]}{\mathbb{E}[\sum_i W_i]}
 \]</span></p>
 <p>Además, como</p>
-<p><span class="math display">\[
-\begin{aligned}
+<p><span class="math display">\[\begin{align*}
 \mathbb{E}\left[\sum_i W_i R_i\right] &amp;= n \cdot \mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} \cdot R\right] \\
 &amp;=
 n \cdot \mathbb{E}\left[\psi^{IPS}\right] \\
@@ -450,8 +457,7 @@ n \cdot \mathbb{E}\left[\frac{1}{n} \sum_{i=1}^{n} \psi_i^{IPS}\right] \\
 n \cdot \mathbb{E}\left[\hat{V}_{IPS}^{\pi}\right] \\
 &amp;=  
 n \cdot V^{\pi}
-\end{aligned}
-\]</span></p>
+\end{align*}\]</span></p>
 <p>y &nbsp;<span class="math inline">\(\mathbb{E}[\sum_i W_i] = n \cdot \mathbb{E}[\frac{\pi(A \mid X)}{b(A \mid X)}] = n\)</span>, en general se tiene que</p>
 <p><span class="math display">\[
 \mathbb{E}\left[\frac{\sum_i W_i R_i}{\sum_i W_i}\right] \neq \frac{\mathbb{E}[\sum_i W_i R_i]}{\mathbb{E}[\sum_i W_i]} = \frac{n \cdot V^{\pi}}{n} = V^{\pi}
@@ -470,48 +476,60 @@ n \cdot V^{\pi}
 </section>
 <section id="dr-doubly-robust" class="level2" data-number="2.4">
 <h2 data-number="2.4" class="anchored" data-anchor-id="dr-doubly-robust"><span class="header-section-number">2.4</span> DR (Doubly Robust)</h2>
-<p>Contribución individual por observación al estimador DR del valor de la política objetivo <span class="math inline">\(\pi\)</span>: <span class="math display">\[
+<p>DR toma la predicción de DM como baseline y utiliza importance weighting únicamente para corregir el residual <span class="math inline">\(R - \hat{\mu}(X, A)\)</span>.</p>
+<p>Contribución individual por observación al estimador DR del valor de la target policy <span class="math inline">\(\pi\)</span>: <span class="math display">\[
 \psi_i^{DR} = \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)} \cdot (R_i - \hat{\mu} (X_i,A_i)) \, + \, \sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}
 \]</span></p>
-<p>Estimador DR del valor de la política objetivo <span class="math inline">\(\pi\)</span>: <span class="math display">\[
+<p>Estimador DR del valor de la target policy <span class="math inline">\(\pi\)</span>: <span class="math display">\[
 \hat{V}_{DR}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{DR}
 \]</span></p>
 <p><span class="citation" data-cites="dudik2011">(<a href="#ref-dudik2011" role="doc-biblioref">Dudík et&nbsp;al. 2011</a>)</span>.</p>
+<p><br>
+</p>
 <p><strong>Supuestos:</strong></p>
 <ul>
-<li><span class="math inline">\(\hat{\mu}(X_i,a)\)</span> está definido en el soporte de la política objetivo <span class="math inline">\(\pi\)</span><br>
+<li><span class="math inline">\(\hat{\mu}(X_i,a)\)</span> está definido en el soporte de la target policy <span class="math inline">\(\pi\)</span><br>
 </li>
-<li>Positividad: <span class="math inline">\(\pi(a \mid x) &gt; 0 \implies b(a \mid x) &gt; 0\)</span></li>
+<li>Positivity: <span class="math inline">\(\pi(a \mid x) &gt; 0 \implies b(a \mid x) &gt; 0\)</span></li>
 </ul>
-<p>Supuesto desconocido también <span class="math inline">\(b(a \mid x)\)</span>, y estimado mediante <span class="math inline">\(\hat{b}(a \mid x)\)</span>, el sesgo del estimador DR del valor de la política objetivo <span class="math inline">\(\pi\)</span> es:</p>
-<span class="math display">\[\begin{aligned}
-
-Bias_{DR} &amp;= \mathbb{E}\left[\hat{V}_{DR}^{\pi}\right] - V^{\pi} \\
+<p><br>
+</p>
+<p>Si la logging policy <span class="math inline">\(b(a \mid x)\)</span> también es desconocida y se sustituye por una estimación <span class="math inline">\(\hat{b}(a \mid x)\)</span>, el sesgo del estimador DR del valor de la target policy <span class="math inline">\(\pi\)</span> viene dado por:</p>
+<p><span class="math display">\[\begin{align*}
+\operatorname{Bias}_{DR} &amp;= \mathbb{E}\left[\hat{V}_{DR}^{\pi}\right] - V^{\pi} \\
 &amp;=
 \mathbb{E}_X\left[\mathbb{E}\left[\hat{V}_{DR}^{\pi}|X\right]\right] - \mathbb{E}_X \left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
-\mathbb{E}_X\left[\mathbb{E} \left[\frac{1}{n} \sum_{i=1}^{n} \frac{\pi(A_i \mid X)}{\hat{b}(A_i \mid X)} \cdot (R_i - \hat{\mu} (X,A_i)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\mathbb{E} \left[\frac{1}{n} \sum_{i=1}^{n} \frac{\pi(A_i \mid X)}{\hat{b}(A_i \mid X)} \cdot (R_i - \hat{\mu} (X,A_i)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}|X\right]\right] \\
+&amp;\qquad\quad
+- \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
-\mathbb{E}_X\left[\mathbb{E} \left[\frac{\pi(A \mid X)}{\hat{b}(A \mid X)} \cdot (R - \hat{\mu} (X,A)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\mathbb{E} \left[\frac{\pi(A \mid X)}{\hat{b}(A \mid X)} \cdot (R - \hat{\mu} (X,A)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}|X\right]\right] \\
+&amp;\qquad\quad
+- \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
-\mathbb{E}_X\left[\sum_a P(A=a \mid X) \cdot \frac{\pi(a \mid X)}{\hat{b}(a \mid X)} \cdot\mathbb{E} [ (R - \hat{\mu} (X,a))|X, A=a] + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a P(A=a \mid X) \cdot \frac{\pi(a \mid X)}{\hat{b}(a \mid X)} \cdot\mathbb{E} [ (R - \hat{\mu} (X,a))|X, A=a] + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}\right] \\
+&amp;\qquad\quad
+- \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
-\mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \frac{b(a \mid X)}{\hat{b}(a \mid X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \frac{b(a \mid X)}{\hat{b}(a \mid X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}\right] \\
+&amp;\qquad\quad
+- \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &amp;=
 \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \frac{b(a \mid X)}{\hat{b}(a \mid X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a \mid X) \cdot (\hat{\mu} (X,a) - \mu(X,a))}\right]  \\
 &amp;=
 \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot (1-\frac{b(a \mid X)}{\hat{b}(a \mid X)}) \cdot (\hat{\mu} (X,a) - \mu (X,a) ) \right]  \\
-
-\end{aligned}\]</span>
-<p>Así, el sesgo del estimador DR del valor de la política objetivo <span class="math inline">\(\pi\)</span> es cero tanto si <span class="math display">\[
+\end{align*}\]</span></p>
+<p>Así, el sesgo del estimador DR del valor de la target policy <span class="math inline">\(\pi\)</span> es cero tanto si <span class="math display">\[
 \hat{\mu} (x,a) = \mu (x,a)
-\]</span> para todo <span class="math inline">\(a\)</span> en el soporte de la política objetivo <span class="math inline">\(\pi\)</span>, como si <span class="math display">\[
+\]</span> para todo <span class="math inline">\(a\)</span> en el soporte de la target policy <span class="math inline">\(\pi\)</span>, como si <span class="math display">\[
 \hat{b}(a \mid x) = b(a \mid x)
-\]</span> para todo <span class="math inline">\(a\)</span> en el soporte de la política objetivo <span class="math inline">\(\pi\)</span>. De ahí la propiedad de doble robustez <span class="citation" data-cites="dudik2011">(<a href="#ref-dudik2011" role="doc-biblioref">Dudík et&nbsp;al. 2011</a>)</span>.</p>
+\]</span> para todo <span class="math inline">\(a\)</span> en el soporte de la target policy <span class="math inline">\(\pi\)</span>. De ahí la propiedad de doble robustez <span class="citation" data-cites="dudik2011">(<a href="#ref-dudik2011" role="doc-biblioref">Dudík et&nbsp;al. 2011</a>)</span>.</p>
 </section>
 <section id="nota" class="level2" data-number="2.5">
 <h2 data-number="2.5" class="anchored" data-anchor-id="nota"><span class="header-section-number">2.5</span> Nota</h2>
 <p>Estas derivaciones se entienden con nuisance models (reward model <span class="math inline">\(\hat{\mu}\)</span> y logging policy <span class="math inline">\(\hat{b}\)</span>) fijos o condicionando en nuisance models aprendidos sobre datos independientes. Si se estiman sobre la misma muestra, aparece dependencia.</p>
+<div style="page-break-after: always;"></div>
 </section>
 </section>
 <section id="dgp" class="level1" data-number="3">
@@ -542,7 +560,7 @@ Salen de aplicar la definición de valor de política a la política de logging 
 </div>
 <section id="protocolo-monte-carlo" class="level2 unnumbered">
 <h2 class="unnumbered anchored" data-anchor-id="protocolo-monte-carlo">Protocolo Monte Carlo</h2>
-<p>Para estudiar las propiedades de muestra finita de los estimadores se utilizan <span class="math inline">\(R\)</span> réplicas Monte Carlo independientes. Si <span class="math inline">\(\hat V_1,\ldots,\hat V_R\)</span> son los valores obtenidos por un estimador en las <span class="math inline">\(R\)</span> réplicas y <span class="math inline">\(V^{\pi}\)</span> es el valor verdadero de la política objetivo, se calcula</p>
+<p>Para estudiar las propiedades de muestra finita de los estimadores se utilizan <span class="math inline">\(R\)</span> réplicas Monte Carlo independientes. Si <span class="math inline">\(\hat V_1,\ldots,\hat V_R\)</span> son los valores obtenidos por un estimador en las <span class="math inline">\(R\)</span> réplicas y <span class="math inline">\(V^{\pi}\)</span> es el valor verdadero de la target policy, se calcula</p>
 <p><span class="math display">\[
 \overline{\hat V}
 =
@@ -581,6 +599,7 @@ Salen de aplicar la definición de valor de política a la política de logging 
 +
 \widehat{\operatorname{Var}}_{\mathrm{MC}}.
 \]</span></p>
+<div style="page-break-after: always;"></div>
 </section>
 </section>
 <section id="estudio-a---overlap" class="level1" data-number="4">
@@ -595,283 +614,199 @@ Salen de aplicar la definición de valor de política a la política de logging 
 <p><span class="math display">\[
 b_\epsilon = \begin{pmatrix} 1 - \epsilon &amp; \epsilon \\ \epsilon &amp; 1 - \epsilon \end{pmatrix}
 \]</span></p>
-<p>Para cada nivel de solapamiento <span class="math inline">\(\epsilon\)</span>, simulamos R = 2000 réplicas de tamaño muestral N = 200, y calculamos el sesgo, varianza y MSE de los estimadores DM, IPS, SNIPS y DR. Para DM y DR, usamos el reward model oráculo <span class="math inline">\(\hat{\mu}_{oracle} = \mu\)</span>, de forma que el sesgo y la varianza observados aíslan el efecto del overlap sin que interfiera el de un reward model mal especificado.</p>
+<p>Para cada nivel de solapamiento <span class="math inline">\(\epsilon\)</span>, simulamos R = 2000 réplicas de tamaño muestral n= 200, y calculamos el sesgo, varianza y MSE de los estimadores DM, IPS, SNIPS y DR. Para DM y DR, usamos el reward model oráculo <span class="math inline">\(\hat{\mu}_{oracle} = \mu\)</span>, de forma que el sesgo y la varianza observados aíslan el efecto del overlap sin que interfiera el de un reward model mal especificado.</p>
 </section>
 <section id="resultados" class="level2" data-number="4.3">
 <h2 data-number="4.3" class="anchored" data-anchor-id="resultados"><span class="header-section-number">4.3</span> Resultados</h2>
-<div id="e64d6304" class="cell" data-execution_count="1">
-<div class="cell-output cell-output-display" data-execution_count="50">
+<div id="fb69711d" class="cell" data-execution_count="1">
+<div class="cell-output cell-output-display" data-execution_count="8">
 <style type="text/css">
-#T_fc23b th {
+#T_0635b th {
   text-align: center;
 }
-#T_fc23b_row0_col0, #T_fc23b_row0_col1, #T_fc23b_row0_col2, #T_fc23b_row0_col3, #T_fc23b_row0_col4, #T_fc23b_row0_col5, #T_fc23b_row0_col6, #T_fc23b_row0_col7, #T_fc23b_row0_col8, #T_fc23b_row0_col9, #T_fc23b_row1_col0, #T_fc23b_row1_col1, #T_fc23b_row1_col2, #T_fc23b_row1_col3, #T_fc23b_row1_col4, #T_fc23b_row1_col5, #T_fc23b_row1_col6, #T_fc23b_row1_col7, #T_fc23b_row1_col8, #T_fc23b_row1_col9, #T_fc23b_row2_col0, #T_fc23b_row2_col1, #T_fc23b_row2_col2, #T_fc23b_row2_col3, #T_fc23b_row2_col4, #T_fc23b_row2_col5, #T_fc23b_row2_col6, #T_fc23b_row2_col7, #T_fc23b_row2_col8, #T_fc23b_row2_col9, #T_fc23b_row3_col0, #T_fc23b_row3_col1, #T_fc23b_row3_col2, #T_fc23b_row3_col3, #T_fc23b_row3_col4, #T_fc23b_row3_col5, #T_fc23b_row3_col6, #T_fc23b_row3_col7, #T_fc23b_row3_col8, #T_fc23b_row3_col9, #T_fc23b_row4_col0, #T_fc23b_row4_col1, #T_fc23b_row4_col2, #T_fc23b_row4_col3, #T_fc23b_row4_col4, #T_fc23b_row4_col5, #T_fc23b_row4_col6, #T_fc23b_row4_col7, #T_fc23b_row4_col8, #T_fc23b_row4_col9, #T_fc23b_row5_col0, #T_fc23b_row5_col1, #T_fc23b_row5_col2, #T_fc23b_row5_col3, #T_fc23b_row5_col4, #T_fc23b_row5_col5, #T_fc23b_row5_col6, #T_fc23b_row5_col7, #T_fc23b_row5_col8, #T_fc23b_row5_col9, #T_fc23b_row6_col0, #T_fc23b_row6_col1, #T_fc23b_row6_col2, #T_fc23b_row6_col3, #T_fc23b_row6_col4, #T_fc23b_row6_col5, #T_fc23b_row6_col6, #T_fc23b_row6_col7, #T_fc23b_row6_col8, #T_fc23b_row6_col9, #T_fc23b_row7_col0, #T_fc23b_row7_col1, #T_fc23b_row7_col2, #T_fc23b_row7_col3, #T_fc23b_row7_col4, #T_fc23b_row7_col5, #T_fc23b_row7_col6, #T_fc23b_row7_col7, #T_fc23b_row7_col8, #T_fc23b_row7_col9, #T_fc23b_row8_col0, #T_fc23b_row8_col1, #T_fc23b_row8_col2, #T_fc23b_row8_col3, #T_fc23b_row8_col4, #T_fc23b_row8_col5, #T_fc23b_row8_col6, #T_fc23b_row8_col7, #T_fc23b_row8_col8, #T_fc23b_row8_col9, #T_fc23b_row9_col0, #T_fc23b_row9_col1, #T_fc23b_row9_col2, #T_fc23b_row9_col3, #T_fc23b_row9_col4, #T_fc23b_row9_col5, #T_fc23b_row9_col6, #T_fc23b_row9_col7, #T_fc23b_row9_col8, #T_fc23b_row9_col9, #T_fc23b_row10_col0, #T_fc23b_row10_col1, #T_fc23b_row10_col2, #T_fc23b_row10_col3, #T_fc23b_row10_col4, #T_fc23b_row10_col5, #T_fc23b_row10_col6, #T_fc23b_row10_col7, #T_fc23b_row10_col8, #T_fc23b_row10_col9, #T_fc23b_row11_col0, #T_fc23b_row11_col1, #T_fc23b_row11_col2, #T_fc23b_row11_col3, #T_fc23b_row11_col4, #T_fc23b_row11_col5, #T_fc23b_row11_col6, #T_fc23b_row11_col7, #T_fc23b_row11_col8, #T_fc23b_row11_col9, #T_fc23b_row12_col0, #T_fc23b_row12_col1, #T_fc23b_row12_col2, #T_fc23b_row12_col3, #T_fc23b_row12_col4, #T_fc23b_row12_col5, #T_fc23b_row12_col6, #T_fc23b_row12_col7, #T_fc23b_row12_col8, #T_fc23b_row12_col9, #T_fc23b_row13_col0, #T_fc23b_row13_col1, #T_fc23b_row13_col2, #T_fc23b_row13_col3, #T_fc23b_row13_col4, #T_fc23b_row13_col5, #T_fc23b_row13_col6, #T_fc23b_row13_col7, #T_fc23b_row13_col8, #T_fc23b_row13_col9, #T_fc23b_row14_col0, #T_fc23b_row14_col1, #T_fc23b_row14_col2, #T_fc23b_row14_col3, #T_fc23b_row14_col4, #T_fc23b_row14_col5, #T_fc23b_row14_col6, #T_fc23b_row14_col7, #T_fc23b_row14_col8, #T_fc23b_row14_col9, #T_fc23b_row15_col0, #T_fc23b_row15_col1, #T_fc23b_row15_col2, #T_fc23b_row15_col3, #T_fc23b_row15_col4, #T_fc23b_row15_col5, #T_fc23b_row15_col6, #T_fc23b_row15_col7, #T_fc23b_row15_col8, #T_fc23b_row15_col9, #T_fc23b_row16_col0, #T_fc23b_row16_col1, #T_fc23b_row16_col2, #T_fc23b_row16_col3, #T_fc23b_row16_col4, #T_fc23b_row16_col5, #T_fc23b_row16_col6, #T_fc23b_row16_col7, #T_fc23b_row16_col8, #T_fc23b_row16_col9, #T_fc23b_row17_col0, #T_fc23b_row17_col1, #T_fc23b_row17_col2, #T_fc23b_row17_col3, #T_fc23b_row17_col4, #T_fc23b_row17_col5, #T_fc23b_row17_col6, #T_fc23b_row17_col7, #T_fc23b_row17_col8, #T_fc23b_row17_col9, #T_fc23b_row18_col0, #T_fc23b_row18_col1, #T_fc23b_row18_col2, #T_fc23b_row18_col3, #T_fc23b_row18_col4, #T_fc23b_row18_col5, #T_fc23b_row18_col6, #T_fc23b_row18_col7, #T_fc23b_row18_col8, #T_fc23b_row18_col9, #T_fc23b_row19_col0, #T_fc23b_row19_col1, #T_fc23b_row19_col2, #T_fc23b_row19_col3, #T_fc23b_row19_col4, #T_fc23b_row19_col5, #T_fc23b_row19_col6, #T_fc23b_row19_col7, #T_fc23b_row19_col8, #T_fc23b_row19_col9 {
+#T_0635b_row0_col0, #T_0635b_row0_col1, #T_0635b_row0_col2, #T_0635b_row0_col3, #T_0635b_row0_col4, #T_0635b_row0_col5, #T_0635b_row1_col0, #T_0635b_row1_col1, #T_0635b_row1_col2, #T_0635b_row1_col3, #T_0635b_row1_col4, #T_0635b_row1_col5, #T_0635b_row2_col0, #T_0635b_row2_col1, #T_0635b_row2_col2, #T_0635b_row2_col3, #T_0635b_row2_col4, #T_0635b_row2_col5, #T_0635b_row3_col0, #T_0635b_row3_col1, #T_0635b_row3_col2, #T_0635b_row3_col3, #T_0635b_row3_col4, #T_0635b_row3_col5, #T_0635b_row4_col0, #T_0635b_row4_col1, #T_0635b_row4_col2, #T_0635b_row4_col3, #T_0635b_row4_col4, #T_0635b_row4_col5, #T_0635b_row5_col0, #T_0635b_row5_col1, #T_0635b_row5_col2, #T_0635b_row5_col3, #T_0635b_row5_col4, #T_0635b_row5_col5, #T_0635b_row6_col0, #T_0635b_row6_col1, #T_0635b_row6_col2, #T_0635b_row6_col3, #T_0635b_row6_col4, #T_0635b_row6_col5, #T_0635b_row7_col0, #T_0635b_row7_col1, #T_0635b_row7_col2, #T_0635b_row7_col3, #T_0635b_row7_col4, #T_0635b_row7_col5, #T_0635b_row8_col0, #T_0635b_row8_col1, #T_0635b_row8_col2, #T_0635b_row8_col3, #T_0635b_row8_col4, #T_0635b_row8_col5, #T_0635b_row9_col0, #T_0635b_row9_col1, #T_0635b_row9_col2, #T_0635b_row9_col3, #T_0635b_row9_col4, #T_0635b_row9_col5, #T_0635b_row10_col0, #T_0635b_row10_col1, #T_0635b_row10_col2, #T_0635b_row10_col3, #T_0635b_row10_col4, #T_0635b_row10_col5, #T_0635b_row11_col0, #T_0635b_row11_col1, #T_0635b_row11_col2, #T_0635b_row11_col3, #T_0635b_row11_col4, #T_0635b_row11_col5, #T_0635b_row12_col0, #T_0635b_row12_col1, #T_0635b_row12_col2, #T_0635b_row12_col3, #T_0635b_row12_col4, #T_0635b_row12_col5, #T_0635b_row13_col0, #T_0635b_row13_col1, #T_0635b_row13_col2, #T_0635b_row13_col3, #T_0635b_row13_col4, #T_0635b_row13_col5, #T_0635b_row14_col0, #T_0635b_row14_col1, #T_0635b_row14_col2, #T_0635b_row14_col3, #T_0635b_row14_col4, #T_0635b_row14_col5, #T_0635b_row15_col0, #T_0635b_row15_col1, #T_0635b_row15_col2, #T_0635b_row15_col3, #T_0635b_row15_col4, #T_0635b_row15_col5, #T_0635b_row16_col0, #T_0635b_row16_col1, #T_0635b_row16_col2, #T_0635b_row16_col3, #T_0635b_row16_col4, #T_0635b_row16_col5, #T_0635b_row17_col0, #T_0635b_row17_col1, #T_0635b_row17_col2, #T_0635b_row17_col3, #T_0635b_row17_col4, #T_0635b_row17_col5, #T_0635b_row18_col0, #T_0635b_row18_col1, #T_0635b_row18_col2, #T_0635b_row18_col3, #T_0635b_row18_col4, #T_0635b_row18_col5, #T_0635b_row19_col0, #T_0635b_row19_col1, #T_0635b_row19_col2, #T_0635b_row19_col3, #T_0635b_row19_col4, #T_0635b_row19_col5 {
   text-align: center;
 }
 </style>
 
-<table id="T_fc23b" class="caption-top table table-sm table-striped small">
+<table id="T_0635b" class="caption-top table table-sm table-striped small">
 <thead>
 <tr class="header">
-<th id="T_fc23b_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">epsilon</th>
-<th id="T_fc23b_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">estimator</th>
-<th id="T_fc23b_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">mean</th>
-<th id="T_fc23b_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">bias</th>
-<th id="T_fc23b_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">variance</th>
-<th id="T_fc23b_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">mse</th>
-<th id="T_fc23b_level0_col6" class="col_heading level0 col6" data-quarto-table-cell-role="th">std</th>
-<th id="T_fc23b_level0_col7" class="col_heading level0 col7" data-quarto-table-cell-role="th">scaled_variance</th>
-<th id="T_fc23b_level0_col8" class="col_heading level0 col8" data-quarto-table-cell-role="th">min</th>
-<th id="T_fc23b_level0_col9" class="col_heading level0 col9" data-quarto-table-cell-role="th">max</th>
+<th id="T_0635b_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">epsilon</th>
+<th id="T_0635b_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">estimator</th>
+<th id="T_0635b_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">mean</th>
+<th id="T_0635b_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">bias</th>
+<th id="T_0635b_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">variance</th>
+<th id="T_0635b_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">mse</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td id="T_fc23b_row0_col0" class="data row0 col0">0.3</td>
-<td id="T_fc23b_row0_col1" class="data row0 col1">DM</td>
-<td id="T_fc23b_row0_col2" class="data row0 col2">0.660016</td>
-<td id="T_fc23b_row0_col3" class="data row0 col3">0.000016</td>
-<td id="T_fc23b_row0_col4" class="data row0 col4">0.000002</td>
-<td id="T_fc23b_row0_col5" class="data row0 col5">0.000002</td>
-<td id="T_fc23b_row0_col6" class="data row0 col6">0.001403</td>
-<td id="T_fc23b_row0_col7" class="data row0 col7">0.000394</td>
-<td id="T_fc23b_row0_col8" class="data row0 col8">0.655200</td>
-<td id="T_fc23b_row0_col9" class="data row0 col9">0.666200</td>
+<td id="T_0635b_row0_col0" class="data row0 col0">0.3</td>
+<td id="T_0635b_row0_col1" class="data row0 col1">DM</td>
+<td id="T_0635b_row0_col2" class="data row0 col2">0.660016</td>
+<td id="T_0635b_row0_col3" class="data row0 col3">0.000016</td>
+<td id="T_0635b_row0_col4" class="data row0 col4">0.000002</td>
+<td id="T_0635b_row0_col5" class="data row0 col5">0.000002</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row1_col0" class="data row1 col0">0.3</td>
-<td id="T_fc23b_row1_col1" class="data row1 col1">IPS</td>
-<td id="T_fc23b_row1_col2" class="data row1 col2">0.657402</td>
-<td id="T_fc23b_row1_col3" class="data row1 col3">-0.002598</td>
-<td id="T_fc23b_row1_col4" class="data row1 col4">0.006000</td>
-<td id="T_fc23b_row1_col5" class="data row1 col5">0.006007</td>
-<td id="T_fc23b_row1_col6" class="data row1 col6">0.077459</td>
-<td id="T_fc23b_row1_col7" class="data row1 col7">1.199978</td>
-<td id="T_fc23b_row1_col8" class="data row1 col8">0.399048</td>
-<td id="T_fc23b_row1_col9" class="data row1 col9">0.953810</td>
+<td id="T_0635b_row1_col0" class="data row1 col0">0.3</td>
+<td id="T_0635b_row1_col1" class="data row1 col1">IPS</td>
+<td id="T_0635b_row1_col2" class="data row1 col2">0.657402</td>
+<td id="T_0635b_row1_col3" class="data row1 col3">-0.002598</td>
+<td id="T_0635b_row1_col4" class="data row1 col4">0.006000</td>
+<td id="T_0635b_row1_col5" class="data row1 col5">0.006007</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row2_col0" class="data row2 col0">0.3</td>
-<td id="T_fc23b_row2_col1" class="data row2 col1">SNIPS</td>
-<td id="T_fc23b_row2_col2" class="data row2 col2">0.657291</td>
-<td id="T_fc23b_row2_col3" class="data row2 col3">-0.002709</td>
-<td id="T_fc23b_row2_col4" class="data row2 col4">0.002164</td>
-<td id="T_fc23b_row2_col5" class="data row2 col5">0.002171</td>
-<td id="T_fc23b_row2_col6" class="data row2 col6">0.046517</td>
-<td id="T_fc23b_row2_col7" class="data row2 col7">0.432772</td>
-<td id="T_fc23b_row2_col8" class="data row2 col8">0.465556</td>
-<td id="T_fc23b_row2_col9" class="data row2 col9">0.801304</td>
+<td id="T_0635b_row2_col0" class="data row2 col0">0.3</td>
+<td id="T_0635b_row2_col1" class="data row2 col1">SNIPS</td>
+<td id="T_0635b_row2_col2" class="data row2 col2">0.657291</td>
+<td id="T_0635b_row2_col3" class="data row2 col3">-0.002709</td>
+<td id="T_0635b_row2_col4" class="data row2 col4">0.002164</td>
+<td id="T_0635b_row2_col5" class="data row2 col5">0.002171</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row3_col0" class="data row3 col0">0.3</td>
-<td id="T_fc23b_row3_col1" class="data row3 col1">DR</td>
-<td id="T_fc23b_row3_col2" class="data row3 col2">0.658377</td>
-<td id="T_fc23b_row3_col3" class="data row3 col3">-0.001623</td>
-<td id="T_fc23b_row3_col4" class="data row3 col4">0.001967</td>
-<td id="T_fc23b_row3_col5" class="data row3 col5">0.001969</td>
-<td id="T_fc23b_row3_col6" class="data row3 col6">0.044346</td>
-<td id="T_fc23b_row3_col7" class="data row3 col7">0.393322</td>
-<td id="T_fc23b_row3_col8" class="data row3 col8">0.506448</td>
-<td id="T_fc23b_row3_col9" class="data row3 col9">0.805581</td>
+<td id="T_0635b_row3_col0" class="data row3 col0">0.3</td>
+<td id="T_0635b_row3_col1" class="data row3 col1">DR</td>
+<td id="T_0635b_row3_col2" class="data row3 col2">0.658377</td>
+<td id="T_0635b_row3_col3" class="data row3 col3">-0.001623</td>
+<td id="T_0635b_row3_col4" class="data row3 col4">0.001967</td>
+<td id="T_0635b_row3_col5" class="data row3 col5">0.001969</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row4_col0" class="data row4 col0">0.1</td>
-<td id="T_fc23b_row4_col1" class="data row4 col1">DM</td>
-<td id="T_fc23b_row4_col2" class="data row4 col2">0.660003</td>
-<td id="T_fc23b_row4_col3" class="data row4 col3">0.000003</td>
-<td id="T_fc23b_row4_col4" class="data row4 col4">0.000002</td>
-<td id="T_fc23b_row4_col5" class="data row4 col5">0.000002</td>
-<td id="T_fc23b_row4_col6" class="data row4 col6">0.001405</td>
-<td id="T_fc23b_row4_col7" class="data row4 col7">0.000395</td>
-<td id="T_fc23b_row4_col8" class="data row4 col8">0.655200</td>
-<td id="T_fc23b_row4_col9" class="data row4 col9">0.666200</td>
+<td id="T_0635b_row4_col0" class="data row4 col0">0.1</td>
+<td id="T_0635b_row4_col1" class="data row4 col1">DM</td>
+<td id="T_0635b_row4_col2" class="data row4 col2">0.660003</td>
+<td id="T_0635b_row4_col3" class="data row4 col3">0.000003</td>
+<td id="T_0635b_row4_col4" class="data row4 col4">0.000002</td>
+<td id="T_0635b_row4_col5" class="data row4 col5">0.000002</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row5_col0" class="data row5 col0">0.1</td>
-<td id="T_fc23b_row5_col1" class="data row5 col1">IPS</td>
-<td id="T_fc23b_row5_col2" class="data row5 col2">0.662038</td>
-<td id="T_fc23b_row5_col3" class="data row5 col3">0.002038</td>
-<td id="T_fc23b_row5_col4" class="data row5 col4">0.022055</td>
-<td id="T_fc23b_row5_col5" class="data row5 col5">0.022059</td>
-<td id="T_fc23b_row5_col6" class="data row5 col6">0.148508</td>
-<td id="T_fc23b_row5_col7" class="data row5 col7">4.410901</td>
-<td id="T_fc23b_row5_col8" class="data row5 col8">0.248889</td>
-<td id="T_fc23b_row5_col9" class="data row5 col9">1.177778</td>
+<td id="T_0635b_row5_col0" class="data row5 col0">0.1</td>
+<td id="T_0635b_row5_col1" class="data row5 col1">IPS</td>
+<td id="T_0635b_row5_col2" class="data row5 col2">0.662038</td>
+<td id="T_0635b_row5_col3" class="data row5 col3">0.002038</td>
+<td id="T_0635b_row5_col4" class="data row5 col4">0.022055</td>
+<td id="T_0635b_row5_col5" class="data row5 col5">0.022059</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row6_col0" class="data row6 col0">0.1</td>
-<td id="T_fc23b_row6_col1" class="data row6 col1">SNIPS</td>
-<td id="T_fc23b_row6_col2" class="data row6 col2">0.657443</td>
-<td id="T_fc23b_row6_col3" class="data row6 col3">-0.002557</td>
-<td id="T_fc23b_row6_col4" class="data row6 col4">0.006545</td>
-<td id="T_fc23b_row6_col5" class="data row6 col5">0.006551</td>
-<td id="T_fc23b_row6_col6" class="data row6 col6">0.080899</td>
-<td id="T_fc23b_row6_col7" class="data row6 col7">1.308927</td>
-<td id="T_fc23b_row6_col8" class="data row6 col8">0.349275</td>
-<td id="T_fc23b_row6_col9" class="data row6 col9">0.875936</td>
+<td id="T_0635b_row6_col0" class="data row6 col0">0.1</td>
+<td id="T_0635b_row6_col1" class="data row6 col1">SNIPS</td>
+<td id="T_0635b_row6_col2" class="data row6 col2">0.657443</td>
+<td id="T_0635b_row6_col3" class="data row6 col3">-0.002557</td>
+<td id="T_0635b_row6_col4" class="data row6 col4">0.006545</td>
+<td id="T_0635b_row6_col5" class="data row6 col5">0.006551</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row7_col0" class="data row7 col0">0.1</td>
-<td id="T_fc23b_row7_col1" class="data row7 col1">DR</td>
-<td id="T_fc23b_row7_col2" class="data row7 col2">0.659737</td>
-<td id="T_fc23b_row7_col3" class="data row7 col3">-0.000263</td>
-<td id="T_fc23b_row7_col4" class="data row7 col4">0.006029</td>
-<td id="T_fc23b_row7_col5" class="data row7 col5">0.006029</td>
-<td id="T_fc23b_row7_col6" class="data row7 col6">0.077647</td>
-<td id="T_fc23b_row7_col7" class="data row7 col7">1.205801</td>
-<td id="T_fc23b_row7_col8" class="data row7 col8">0.382044</td>
-<td id="T_fc23b_row7_col9" class="data row7 col9">0.891467</td>
+<td id="T_0635b_row7_col0" class="data row7 col0">0.1</td>
+<td id="T_0635b_row7_col1" class="data row7 col1">DR</td>
+<td id="T_0635b_row7_col2" class="data row7 col2">0.659737</td>
+<td id="T_0635b_row7_col3" class="data row7 col3">-0.000263</td>
+<td id="T_0635b_row7_col4" class="data row7 col4">0.006029</td>
+<td id="T_0635b_row7_col5" class="data row7 col5">0.006029</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row8_col0" class="data row8 col0">0.05</td>
-<td id="T_fc23b_row8_col1" class="data row8 col1">DM</td>
-<td id="T_fc23b_row8_col2" class="data row8 col2">0.660000</td>
-<td id="T_fc23b_row8_col3" class="data row8 col3">-0.000000</td>
-<td id="T_fc23b_row8_col4" class="data row8 col4">0.000002</td>
-<td id="T_fc23b_row8_col5" class="data row8 col5">0.000002</td>
-<td id="T_fc23b_row8_col6" class="data row8 col6">0.001408</td>
-<td id="T_fc23b_row8_col7" class="data row8 col7">0.000397</td>
-<td id="T_fc23b_row8_col8" class="data row8 col8">0.655200</td>
-<td id="T_fc23b_row8_col9" class="data row8 col9">0.666200</td>
+<td id="T_0635b_row8_col0" class="data row8 col0">0.05</td>
+<td id="T_0635b_row8_col1" class="data row8 col1">DM</td>
+<td id="T_0635b_row8_col2" class="data row8 col2">0.660000</td>
+<td id="T_0635b_row8_col3" class="data row8 col3">-0.000000</td>
+<td id="T_0635b_row8_col4" class="data row8 col4">0.000002</td>
+<td id="T_0635b_row8_col5" class="data row8 col5">0.000002</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row9_col0" class="data row9 col0">0.05</td>
-<td id="T_fc23b_row9_col1" class="data row9 col1">IPS</td>
-<td id="T_fc23b_row9_col2" class="data row9 col2">0.659912</td>
-<td id="T_fc23b_row9_col3" class="data row9 col3">-0.000088</td>
-<td id="T_fc23b_row9_col4" class="data row9 col4">0.046347</td>
-<td id="T_fc23b_row9_col5" class="data row9 col5">0.046347</td>
-<td id="T_fc23b_row9_col6" class="data row9 col6">0.215284</td>
-<td id="T_fc23b_row9_col7" class="data row9 col7">9.269478</td>
-<td id="T_fc23b_row9_col8" class="data row9 col8">0.122105</td>
-<td id="T_fc23b_row9_col9" class="data row9 col9">1.421053</td>
+<td id="T_0635b_row9_col0" class="data row9 col0">0.05</td>
+<td id="T_0635b_row9_col1" class="data row9 col1">IPS</td>
+<td id="T_0635b_row9_col2" class="data row9 col2">0.659912</td>
+<td id="T_0635b_row9_col3" class="data row9 col3">-0.000088</td>
+<td id="T_0635b_row9_col4" class="data row9 col4">0.046347</td>
+<td id="T_0635b_row9_col5" class="data row9 col5">0.046347</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row10_col0" class="data row10 col0">0.05</td>
-<td id="T_fc23b_row10_col1" class="data row10 col1">SNIPS</td>
-<td id="T_fc23b_row10_col2" class="data row10 col2">0.651849</td>
-<td id="T_fc23b_row10_col3" class="data row10 col3">-0.008151</td>
-<td id="T_fc23b_row10_col4" class="data row10 col4">0.013245</td>
-<td id="T_fc23b_row10_col5" class="data row10 col5">0.013312</td>
-<td id="T_fc23b_row10_col6" class="data row10 col6">0.115088</td>
-<td id="T_fc23b_row10_col7" class="data row10 col7">2.649070</td>
-<td id="T_fc23b_row10_col8" class="data row10 col8">0.195862</td>
-<td id="T_fc23b_row10_col9" class="data row10 col9">0.910714</td>
+<td id="T_0635b_row10_col0" class="data row10 col0">0.05</td>
+<td id="T_0635b_row10_col1" class="data row10 col1">SNIPS</td>
+<td id="T_0635b_row10_col2" class="data row10 col2">0.651849</td>
+<td id="T_0635b_row10_col3" class="data row10 col3">-0.008151</td>
+<td id="T_0635b_row10_col4" class="data row10 col4">0.013245</td>
+<td id="T_0635b_row10_col5" class="data row10 col5">0.013312</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row11_col0" class="data row11 col0">0.05</td>
-<td id="T_fc23b_row11_col1" class="data row11 col1">DR</td>
-<td id="T_fc23b_row11_col2" class="data row11 col2">0.657595</td>
-<td id="T_fc23b_row11_col3" class="data row11 col3">-0.002405</td>
-<td id="T_fc23b_row11_col4" class="data row11 col4">0.012170</td>
-<td id="T_fc23b_row11_col5" class="data row11 col5">0.012175</td>
-<td id="T_fc23b_row11_col6" class="data row11 col6">0.110316</td>
-<td id="T_fc23b_row11_col7" class="data row11 col7">2.433913</td>
-<td id="T_fc23b_row11_col8" class="data row11 col8">0.096274</td>
-<td id="T_fc23b_row11_col9" class="data row11 col9">0.992189</td>
+<td id="T_0635b_row11_col0" class="data row11 col0">0.05</td>
+<td id="T_0635b_row11_col1" class="data row11 col1">DR</td>
+<td id="T_0635b_row11_col2" class="data row11 col2">0.657595</td>
+<td id="T_0635b_row11_col3" class="data row11 col3">-0.002405</td>
+<td id="T_0635b_row11_col4" class="data row11 col4">0.012170</td>
+<td id="T_0635b_row11_col5" class="data row11 col5">0.012175</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row12_col0" class="data row12 col0">0.02</td>
-<td id="T_fc23b_row12_col1" class="data row12 col1">DM</td>
-<td id="T_fc23b_row12_col2" class="data row12 col2">0.660006</td>
-<td id="T_fc23b_row12_col3" class="data row12 col3">0.000006</td>
-<td id="T_fc23b_row12_col4" class="data row12 col4">0.000002</td>
-<td id="T_fc23b_row12_col5" class="data row12 col5">0.000002</td>
-<td id="T_fc23b_row12_col6" class="data row12 col6">0.001404</td>
-<td id="T_fc23b_row12_col7" class="data row12 col7">0.000394</td>
-<td id="T_fc23b_row12_col8" class="data row12 col8">0.655200</td>
-<td id="T_fc23b_row12_col9" class="data row12 col9">0.666200</td>
+<td id="T_0635b_row12_col0" class="data row12 col0">0.02</td>
+<td id="T_0635b_row12_col1" class="data row12 col1">DM</td>
+<td id="T_0635b_row12_col2" class="data row12 col2">0.660006</td>
+<td id="T_0635b_row12_col3" class="data row12 col3">0.000006</td>
+<td id="T_0635b_row12_col4" class="data row12 col4">0.000002</td>
+<td id="T_0635b_row12_col5" class="data row12 col5">0.000002</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row13_col0" class="data row13 col0">0.02</td>
-<td id="T_fc23b_row13_col1" class="data row13 col1">IPS</td>
-<td id="T_fc23b_row13_col2" class="data row13 col2">0.652283</td>
-<td id="T_fc23b_row13_col3" class="data row13 col3">-0.007717</td>
-<td id="T_fc23b_row13_col4" class="data row13 col4">0.113588</td>
-<td id="T_fc23b_row13_col5" class="data row13 col5">0.113648</td>
-<td id="T_fc23b_row13_col6" class="data row13 col6">0.337029</td>
-<td id="T_fc23b_row13_col7" class="data row13 col7">22.717660</td>
-<td id="T_fc23b_row13_col8" class="data row13 col8">0.046939</td>
-<td id="T_fc23b_row13_col9" class="data row13 col9">2.056122</td>
+<td id="T_0635b_row13_col0" class="data row13 col0">0.02</td>
+<td id="T_0635b_row13_col1" class="data row13 col1">IPS</td>
+<td id="T_0635b_row13_col2" class="data row13 col2">0.652283</td>
+<td id="T_0635b_row13_col3" class="data row13 col3">-0.007717</td>
+<td id="T_0635b_row13_col4" class="data row13 col4">0.113588</td>
+<td id="T_0635b_row13_col5" class="data row13 col5">0.113648</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row14_col0" class="data row14 col0">0.02</td>
-<td id="T_fc23b_row14_col1" class="data row14 col1">SNIPS</td>
-<td id="T_fc23b_row14_col2" class="data row14 col2">0.639110</td>
-<td id="T_fc23b_row14_col3" class="data row14 col3">-0.020890</td>
-<td id="T_fc23b_row14_col4" class="data row14 col4">0.033821</td>
-<td id="T_fc23b_row14_col5" class="data row14 col5">0.034257</td>
-<td id="T_fc23b_row14_col6" class="data row14 col6">0.183904</td>
-<td id="T_fc23b_row14_col7" class="data row14 col7">6.764147</td>
-<td id="T_fc23b_row14_col8" class="data row14 col8">0.050213</td>
-<td id="T_fc23b_row14_col9" class="data row14 col9">0.937209</td>
+<td id="T_0635b_row14_col0" class="data row14 col0">0.02</td>
+<td id="T_0635b_row14_col1" class="data row14 col1">SNIPS</td>
+<td id="T_0635b_row14_col2" class="data row14 col2">0.639110</td>
+<td id="T_0635b_row14_col3" class="data row14 col3">-0.020890</td>
+<td id="T_0635b_row14_col4" class="data row14 col4">0.033821</td>
+<td id="T_0635b_row14_col5" class="data row14 col5">0.034257</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row15_col0" class="data row15 col0">0.02</td>
-<td id="T_fc23b_row15_col1" class="data row15 col1">DR</td>
-<td id="T_fc23b_row15_col2" class="data row15 col2">0.659050</td>
-<td id="T_fc23b_row15_col3" class="data row15 col3">-0.000950</td>
-<td id="T_fc23b_row15_col4" class="data row15 col4">0.027993</td>
-<td id="T_fc23b_row15_col5" class="data row15 col5">0.027994</td>
-<td id="T_fc23b_row15_col6" class="data row15 col6">0.167312</td>
-<td id="T_fc23b_row15_col7" class="data row15 col7">5.598673</td>
-<td id="T_fc23b_row15_col8" class="data row15 col8">-0.128955</td>
-<td id="T_fc23b_row15_col9" class="data row15 col9">1.090845</td>
+<td id="T_0635b_row15_col0" class="data row15 col0">0.02</td>
+<td id="T_0635b_row15_col1" class="data row15 col1">DR</td>
+<td id="T_0635b_row15_col2" class="data row15 col2">0.659050</td>
+<td id="T_0635b_row15_col3" class="data row15 col3">-0.000950</td>
+<td id="T_0635b_row15_col4" class="data row15 col4">0.027993</td>
+<td id="T_0635b_row15_col5" class="data row15 col5">0.027994</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row16_col0" class="data row16 col0">0.01</td>
-<td id="T_fc23b_row16_col1" class="data row16 col1">DM</td>
-<td id="T_fc23b_row16_col2" class="data row16 col2">0.660004</td>
-<td id="T_fc23b_row16_col3" class="data row16 col3">0.000004</td>
-<td id="T_fc23b_row16_col4" class="data row16 col4">0.000002</td>
-<td id="T_fc23b_row16_col5" class="data row16 col5">0.000002</td>
-<td id="T_fc23b_row16_col6" class="data row16 col6">0.001401</td>
-<td id="T_fc23b_row16_col7" class="data row16 col7">0.000392</td>
-<td id="T_fc23b_row16_col8" class="data row16 col8">0.655200</td>
-<td id="T_fc23b_row16_col9" class="data row16 col9">0.666200</td>
+<td id="T_0635b_row16_col0" class="data row16 col0">0.01</td>
+<td id="T_0635b_row16_col1" class="data row16 col1">DM</td>
+<td id="T_0635b_row16_col2" class="data row16 col2">0.660004</td>
+<td id="T_0635b_row16_col3" class="data row16 col3">0.000004</td>
+<td id="T_0635b_row16_col4" class="data row16 col4">0.000002</td>
+<td id="T_0635b_row16_col5" class="data row16 col5">0.000002</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row17_col0" class="data row17 col0">0.01</td>
-<td id="T_fc23b_row17_col1" class="data row17 col1">IPS</td>
-<td id="T_fc23b_row17_col2" class="data row17 col2">0.652470</td>
-<td id="T_fc23b_row17_col3" class="data row17 col3">-0.007530</td>
-<td id="T_fc23b_row17_col4" class="data row17 col4">0.235888</td>
-<td id="T_fc23b_row17_col5" class="data row17 col5">0.235945</td>
-<td id="T_fc23b_row17_col6" class="data row17 col6">0.485683</td>
-<td id="T_fc23b_row17_col7" class="data row17 col7">47.177564</td>
-<td id="T_fc23b_row17_col8" class="data row17 col8">0.041414</td>
-<td id="T_fc23b_row17_col9" class="data row17 col9">2.859596</td>
+<td id="T_0635b_row17_col0" class="data row17 col0">0.01</td>
+<td id="T_0635b_row17_col1" class="data row17 col1">IPS</td>
+<td id="T_0635b_row17_col2" class="data row17 col2">0.652470</td>
+<td id="T_0635b_row17_col3" class="data row17 col3">-0.007530</td>
+<td id="T_0635b_row17_col4" class="data row17 col4">0.235888</td>
+<td id="T_0635b_row17_col5" class="data row17 col5">0.235945</td>
 </tr>
 <tr class="odd">
-<td id="T_fc23b_row18_col0" class="data row18 col0">0.01</td>
-<td id="T_fc23b_row18_col1" class="data row18 col1">SNIPS</td>
-<td id="T_fc23b_row18_col2" class="data row18 col2">0.605422</td>
-<td id="T_fc23b_row18_col3" class="data row18 col3">-0.054578</td>
-<td id="T_fc23b_row18_col4" class="data row18 col4">0.066441</td>
-<td id="T_fc23b_row18_col5" class="data row18 col5">0.069420</td>
-<td id="T_fc23b_row18_col6" class="data row18 col6">0.257762</td>
-<td id="T_fc23b_row18_col7" class="data row18 col7">13.288209</td>
-<td id="T_fc23b_row18_col8" class="data row18 col8">0.034657</td>
-<td id="T_fc23b_row18_col9" class="data row18 col9">0.954806</td>
+<td id="T_0635b_row18_col0" class="data row18 col0">0.01</td>
+<td id="T_0635b_row18_col1" class="data row18 col1">SNIPS</td>
+<td id="T_0635b_row18_col2" class="data row18 col2">0.605422</td>
+<td id="T_0635b_row18_col3" class="data row18 col3">-0.054578</td>
+<td id="T_0635b_row18_col4" class="data row18 col4">0.066441</td>
+<td id="T_0635b_row18_col5" class="data row18 col5">0.069420</td>
 </tr>
 <tr class="even">
-<td id="T_fc23b_row19_col0" class="data row19 col0">0.01</td>
-<td id="T_fc23b_row19_col1" class="data row19 col1">DR</td>
-<td id="T_fc23b_row19_col2" class="data row19 col2">0.662307</td>
-<td id="T_fc23b_row19_col3" class="data row19 col3">0.002307</td>
-<td id="T_fc23b_row19_col4" class="data row19 col4">0.053939</td>
-<td id="T_fc23b_row19_col5" class="data row19 col5">0.053944</td>
-<td id="T_fc23b_row19_col6" class="data row19 col6">0.232247</td>
-<td id="T_fc23b_row19_col7" class="data row19 col7">10.787759</td>
-<td id="T_fc23b_row19_col8" class="data row19 col8">-0.532335</td>
-<td id="T_fc23b_row19_col9" class="data row19 col9">1.302855</td>
+<td id="T_0635b_row19_col0" class="data row19 col0">0.01</td>
+<td id="T_0635b_row19_col1" class="data row19 col1">DR</td>
+<td id="T_0635b_row19_col2" class="data row19 col2">0.662307</td>
+<td id="T_0635b_row19_col3" class="data row19 col3">0.002307</td>
+<td id="T_0635b_row19_col4" class="data row19 col4">0.053939</td>
+<td id="T_0635b_row19_col5" class="data row19 col5">0.053944</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
 <p>&nbsp;</p>
-<div id="6039e3b0" class="cell" data-execution_count="2">
+<div id="3bc1d58a" class="cell" data-execution_count="2">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -886,8 +821,9 @@ b_\epsilon = \begin{pmatrix} 1 - \epsilon &amp; \epsilon \\ \epsilon &amp; 1 - \
 <section id="interpretación" class="level2" data-number="4.4">
 <h2 data-number="4.4" class="anchored" data-anchor-id="interpretación"><span class="header-section-number">4.4</span> Interpretación</h2>
 <p>Vemos en las gráficas que, al disminuir <span class="math inline">\(\epsilon\)</span>, tanto la varianza como el MSE aumentan para IPS, SNIPS y DR, debido a los importance weights más extremos que se generan al disminuir el solapamiento entre la logging policy y la target policy. Para DM, al usar el reward model oráculo (correcto) y no usar esos pesos, la varianza y el MSE permanecen estables a medida que disminuye <span class="math inline">\(\epsilon\)</span>.</p>
-<p>En cambio, no observamos un aumento sistemático del sesgo para DM, IPS y DR: mientras se mantenga la positividad, el deterioro del overlap se manifiesta fundamentalmente como un problema de varianza. SNIPS presenta además su habitual sesgo de muestra finita.</p>
-<p>Cabe notar que las estimaciones de IPS y DR en ocasiones llegan a salirse del intervalo <span class="math inline">\([0,1]\)</span> de posibles valores de la recompensa media, ya que IPS no es una media convexa de recompensas porque sus pesos no están normalizados, y DR añade una corrección residual ponderada que puede ser positiva o negativa. En particular, IPS es muy sensible a la presencia de observaciones con propensiones bajas, que pueden generar pesos muy grandes y, por tanto, estimaciones extremas (se acentúa este efecto a medida que disminuye el overlap).</p>
+<p>En cambio, no observamos un aumento sistemático del sesgo para DM, IPS y DR: mientras se mantenga la positivity, el deterioro del overlap se manifiesta fundamentalmente como un problema de varianza. SNIPS presenta además su habitual sesgo de muestra finita.</p>
+<p>Cabe notar que las estimaciones de IPS y DR en ocasiones llegan a salirse del intervalo <span class="math inline">\([0,1]\)</span> de posibles valores de la recompensa media, ya que IPS no es una media convexa de recompensas porque sus pesos no están normalizados, y DR añade una corrección residual ponderada que puede ser positiva o negativa. En particular, IPS es muy sensible a la presencia de observaciones con propensities bajas, que pueden generar pesos muy grandes y, por tanto, estimaciones extremas (se acentúa este efecto a medida que disminuye el overlap).</p>
+<div style="page-break-after: always;"></div>
 </section>
 </section>
 <section id="estudio-b---especificación-de-los-nuisance-models" class="level1" data-number="5">
@@ -898,7 +834,7 @@ b_\epsilon = \begin{pmatrix} 1 - \epsilon &amp; \epsilon \\ \epsilon &amp; 1 - \
 </section>
 <section id="diseño-1" class="level2" data-number="5.2">
 <h2 data-number="5.2" class="anchored" data-anchor-id="diseño-1"><span class="header-section-number">5.2</span> Diseño</h2>
-<p>Generamos R = 2000 datasets con N = 200 observaciones cada uno, y registramos para cada dataset los valores estimados de la política objetivo según el estimador. En concreto, estudiamos 10 configuraciones de estimación, que corresponden a DM con reward models correcto (<span class="math inline">\(\hat{\mu} = \mu\)</span>) e incorrecto (<span class="math inline">\(\hat{\mu}_{wrong} = 0.5\)</span>), IPS y SNIPS con estimated logging policy correcta (<span class="math inline">\(\hat{b} = b\)</span>) e incorrecta (<span class="math inline">\(\hat{b}_{wrong} = 0.5\)</span>), y DR cruzado con</p>
+<p>Generamos R = 2000 datasets con n= 200 observaciones cada uno, y registramos para cada dataset los valores estimados de la target policy según el estimador. En concreto, estudiamos 10 configuraciones de estimación, que corresponden a DM con reward models correcto (<span class="math inline">\(\hat{\mu} = \mu\)</span>) e incorrecto (<span class="math inline">\(\hat{\mu}_{wrong} = 0.5\)</span>), IPS y SNIPS con estimated logging policy correcta (<span class="math inline">\(\hat{b} = b\)</span>) e incorrecta (<span class="math inline">\(\hat{b}_{wrong} = 0.5\)</span>), y DR cruzado con</p>
 <p><span class="math display">\[
 \hat{\mu} \in \{\mu, \hat{\mu}_{wrong}\} \quad , \quad \hat{b} \in \{b, \hat{b}_{wrong}\}
 \]</span></p>
@@ -913,91 +849,91 @@ b_\epsilon = \begin{pmatrix} 1 - \epsilon &amp; \epsilon \\ \epsilon &amp; 1 - \
 <h2 data-number="5.3" class="anchored" data-anchor-id="resultados-1"><span class="header-section-number">5.3</span> Resultados</h2>
 <section id="comparación-de-estimadores" class="level3" data-number="5.3.1">
 <h3 data-number="5.3.1" class="anchored" data-anchor-id="comparación-de-estimadores"><span class="header-section-number">5.3.1</span> Comparación de estimadores</h3>
-<div id="72087752" class="cell" data-execution_count="3">
+<div id="d20efc85" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-display">
 <style type="text/css">
 </style>
 
-<table id="T_0a32b" class="caption-top table table-sm table-striped small">
+<table id="T_127fd" class="caption-top table table-sm table-striped small">
 <thead>
 <tr class="header">
-<th id="T_0a32b_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Estimator</th>
-<th id="T_0a32b_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Mean</th>
-<th id="T_0a32b_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">Bias</th>
-<th id="T_0a32b_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Variance</th>
-<th id="T_0a32b_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">MSE</th>
+<th id="T_127fd_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Estimator</th>
+<th id="T_127fd_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Mean</th>
+<th id="T_127fd_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">Bias</th>
+<th id="T_127fd_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Variance</th>
+<th id="T_127fd_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">MSE</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td id="T_0a32b_row0_col0" class="data row0 col0">DM oracle</td>
-<td id="T_0a32b_row0_col1" class="data row0 col1">0.659999</td>
-<td id="T_0a32b_row0_col2" class="data row0 col2">-0.000001</td>
-<td id="T_0a32b_row0_col3" class="data row0 col3">0.000002</td>
-<td id="T_0a32b_row0_col4" class="data row0 col4">0.000002</td>
+<td id="T_127fd_row0_col0" class="data row0 col0">DM oracle</td>
+<td id="T_127fd_row0_col1" class="data row0 col1">0.659999</td>
+<td id="T_127fd_row0_col2" class="data row0 col2">-0.000001</td>
+<td id="T_127fd_row0_col3" class="data row0 col3">0.000002</td>
+<td id="T_127fd_row0_col4" class="data row0 col4">0.000002</td>
 </tr>
 <tr class="even">
-<td id="T_0a32b_row1_col0" class="data row1 col0">DM wrong μ</td>
-<td id="T_0a32b_row1_col1" class="data row1 col1">0.500000</td>
-<td id="T_0a32b_row1_col2" class="data row1 col2">-0.160000</td>
-<td id="T_0a32b_row1_col3" class="data row1 col3">0.000000</td>
-<td id="T_0a32b_row1_col4" class="data row1 col4">0.025600</td>
+<td id="T_127fd_row1_col0" class="data row1 col0">DM wrong μ</td>
+<td id="T_127fd_row1_col1" class="data row1 col1">0.500000</td>
+<td id="T_127fd_row1_col2" class="data row1 col2">-0.160000</td>
+<td id="T_127fd_row1_col3" class="data row1 col3">0.000000</td>
+<td id="T_127fd_row1_col4" class="data row1 col4">0.025600</td>
 </tr>
 <tr class="odd">
-<td id="T_0a32b_row2_col0" class="data row2 col0">IPS correct b</td>
-<td id="T_0a32b_row2_col1" class="data row2 col1">0.658917</td>
-<td id="T_0a32b_row2_col2" class="data row2 col2">-0.001083</td>
-<td id="T_0a32b_row2_col3" class="data row2 col3">0.006043</td>
-<td id="T_0a32b_row2_col4" class="data row2 col4">0.006044</td>
+<td id="T_127fd_row2_col0" class="data row2 col0">IPS correct b</td>
+<td id="T_127fd_row2_col1" class="data row2 col1">0.658917</td>
+<td id="T_127fd_row2_col2" class="data row2 col2">-0.001083</td>
+<td id="T_127fd_row2_col3" class="data row2 col3">0.006043</td>
+<td id="T_127fd_row2_col4" class="data row2 col4">0.006044</td>
 </tr>
 <tr class="even">
-<td id="T_0a32b_row3_col0" class="data row3 col0">IPS wrong b</td>
-<td id="T_0a32b_row3_col1" class="data row3 col1">0.443385</td>
-<td id="T_0a32b_row3_col2" class="data row3 col2">-0.216615</td>
-<td id="T_0a32b_row3_col3" class="data row3 col3">0.002105</td>
-<td id="T_0a32b_row3_col4" class="data row3 col4">0.049027</td>
+<td id="T_127fd_row3_col0" class="data row3 col0">IPS wrong b</td>
+<td id="T_127fd_row3_col1" class="data row3 col1">0.443385</td>
+<td id="T_127fd_row3_col2" class="data row3 col2">-0.216615</td>
+<td id="T_127fd_row3_col3" class="data row3 col3">0.002105</td>
+<td id="T_127fd_row3_col4" class="data row3 col4">0.049027</td>
 </tr>
 <tr class="odd">
-<td id="T_0a32b_row4_col0" class="data row4 col0">SNIPS correct b</td>
-<td id="T_0a32b_row4_col1" class="data row4 col1">0.658685</td>
-<td id="T_0a32b_row4_col2" class="data row4 col2">-0.001315</td>
-<td id="T_0a32b_row4_col3" class="data row4 col3">0.002205</td>
-<td id="T_0a32b_row4_col4" class="data row4 col4">0.002207</td>
+<td id="T_127fd_row4_col0" class="data row4 col0">SNIPS correct b</td>
+<td id="T_127fd_row4_col1" class="data row4 col1">0.658685</td>
+<td id="T_127fd_row4_col2" class="data row4 col2">-0.001315</td>
+<td id="T_127fd_row4_col3" class="data row4 col3">0.002205</td>
+<td id="T_127fd_row4_col4" class="data row4 col4">0.002207</td>
 </tr>
 <tr class="even">
-<td id="T_0a32b_row5_col0" class="data row5 col0">SNIPS wrong b</td>
-<td id="T_0a32b_row5_col1" class="data row5 col1">0.582954</td>
-<td id="T_0a32b_row5_col2" class="data row5 col2">-0.077046</td>
-<td id="T_0a32b_row5_col3" class="data row5 col3">0.001737</td>
-<td id="T_0a32b_row5_col4" class="data row5 col4">0.007674</td>
+<td id="T_127fd_row5_col0" class="data row5 col0">SNIPS wrong b</td>
+<td id="T_127fd_row5_col1" class="data row5 col1">0.582954</td>
+<td id="T_127fd_row5_col2" class="data row5 col2">-0.077046</td>
+<td id="T_127fd_row5_col3" class="data row5 col3">0.001737</td>
+<td id="T_127fd_row5_col4" class="data row5 col4">0.007674</td>
 </tr>
 <tr class="odd">
-<td id="T_0a32b_row6_col0" class="data row6 col0">DR correct μ, correct b</td>
-<td id="T_0a32b_row6_col1" class="data row6 col1">0.659751</td>
-<td id="T_0a32b_row6_col2" class="data row6 col2">-0.000249</td>
-<td id="T_0a32b_row6_col3" class="data row6 col3">0.001992</td>
-<td id="T_0a32b_row6_col4" class="data row6 col4">0.001992</td>
+<td id="T_127fd_row6_col0" class="data row6 col0">DR correct μ, correct b</td>
+<td id="T_127fd_row6_col1" class="data row6 col1">0.659751</td>
+<td id="T_127fd_row6_col2" class="data row6 col2">-0.000249</td>
+<td id="T_127fd_row6_col3" class="data row6 col3">0.001992</td>
+<td id="T_127fd_row6_col4" class="data row6 col4">0.001992</td>
 </tr>
 <tr class="even">
-<td id="T_0a32b_row7_col0" class="data row7 col0">DR correct μ, wrong b</td>
-<td id="T_0a32b_row7_col1" class="data row7 col1">0.659842</td>
-<td id="T_0a32b_row7_col2" class="data row7 col2">-0.000158</td>
-<td id="T_0a32b_row7_col3" class="data row7 col3">0.000811</td>
-<td id="T_0a32b_row7_col4" class="data row7 col4">0.000811</td>
+<td id="T_127fd_row7_col0" class="data row7 col0">DR correct μ, wrong b</td>
+<td id="T_127fd_row7_col1" class="data row7 col1">0.659842</td>
+<td id="T_127fd_row7_col2" class="data row7 col2">-0.000158</td>
+<td id="T_127fd_row7_col3" class="data row7 col3">0.000811</td>
+<td id="T_127fd_row7_col4" class="data row7 col4">0.000811</td>
 </tr>
 <tr class="odd">
-<td id="T_0a32b_row8_col0" class="data row8 col0">DR wrong μ, correct b</td>
-<td id="T_0a32b_row8_col1" class="data row8 col1">0.659479</td>
-<td id="T_0a32b_row8_col2" class="data row8 col2">-0.000521</td>
-<td id="T_0a32b_row8_col3" class="data row8 col3">0.002637</td>
-<td id="T_0a32b_row8_col4" class="data row8 col4">0.002637</td>
+<td id="T_127fd_row8_col0" class="data row8 col0">DR wrong μ, correct b</td>
+<td id="T_127fd_row8_col1" class="data row8 col1">0.659479</td>
+<td id="T_127fd_row8_col2" class="data row8 col2">-0.000521</td>
+<td id="T_127fd_row8_col3" class="data row8 col3">0.002637</td>
+<td id="T_127fd_row8_col4" class="data row8 col4">0.002637</td>
 </tr>
 <tr class="even">
-<td id="T_0a32b_row9_col0" class="data row9 col0">DR wrong μ, wrong b</td>
-<td id="T_0a32b_row9_col1" class="data row9 col1">0.563668</td>
-<td id="T_0a32b_row9_col2" class="data row9 col2">-0.096332</td>
-<td id="T_0a32b_row9_col3" class="data row9 col3">0.001092</td>
-<td id="T_0a32b_row9_col4" class="data row9 col4">0.010372</td>
+<td id="T_127fd_row9_col0" class="data row9 col0">DR wrong μ, wrong b</td>
+<td id="T_127fd_row9_col1" class="data row9 col1">0.563668</td>
+<td id="T_127fd_row9_col2" class="data row9 col2">-0.096332</td>
+<td id="T_127fd_row9_col3" class="data row9 col3">0.001092</td>
+<td id="T_127fd_row9_col4" class="data row9 col4">0.010372</td>
 </tr>
 </tbody>
 </table>
@@ -1006,7 +942,7 @@ b_\epsilon = \begin{pmatrix} 1 - \epsilon &amp; \epsilon \\ \epsilon &amp; 1 - \
 </section>
 <section id="doble-robustez-de-dr" class="level3" data-number="5.3.2">
 <h3 data-number="5.3.2" class="anchored" data-anchor-id="doble-robustez-de-dr"><span class="header-section-number">5.3.2</span> Doble robustez de DR</h3>
-<div id="2f5b1562" class="cell" data-execution_count="4">
+<div id="bd01fe43" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1021,11 +957,10 @@ b_\epsilon = \begin{pmatrix} 1 - \epsilon &amp; \epsilon \\ \epsilon &amp; 1 - \
 <h2 data-number="5.4" class="anchored" data-anchor-id="interpretación-1"><span class="header-section-number">5.4</span> Interpretación</h2>
 <p>En primer lugar, para DM observamos que al pasar de <span class="math inline">\(\hat{\mu} = \mu\)</span> a <span class="math inline">\(\hat{\mu} = \hat{\mu}_{wrong}\)</span>, el sesgo del estimador aumenta significativamente. A pesar de ello, la varianza del segundo caso es cero, ya que todas las estimaciones son iguales a 0.5, lo cual demuestra que baja varianza no significa que el estimador sea bueno.</p>
 <p>Para IPS, al usar <span class="math inline">\(\hat{b} = \hat{b}_{wrong}\)</span>, el sesgo del estimador aumenta significativamente, a pesar de que la varianza llega a disminuir. Esto ocurre porque el estimador está convergiendo al objeto incorrecto, fruto de la misspecification del nuisance model <span class="math inline">\(\hat{b}\)</span>, y no por ruido Monte Carlo.</p>
-<p>Para SNIPS, al igual que IPS, al usar <span class="math inline">\(\hat{b} = \hat{b}_{wrong}\)</span>, el sesgo del estimador aumenta significativamente, pero en menor medida que en IPS; en este DGP, la normalización de los importance weights compensa parcialmente el error introducido por la propensity misspecification. Esto es específico de este DGP, no una garantía de robustez de SNIPS frente a misspecification de la logging policy.</p>
+<p>Para SNIPS, al igual que IPS, al usar <span class="math inline">\(\hat{b} = \hat{b}_{wrong}\)</span>, el sesgo del estimador aumenta significativamente, pero en menor medida que en IPS; en este DGP, la normalización de los importance weights compensa parcialmente el error introducido por la propensity misspecification. Esto es específico de este DGP, no una propiedad de robustez de SNIPS frente a misspecification de la logging policy.</p>
 <p>Como sabemos, el estimador DR es doblemente robusto, y se ve claramente en la tabla y en el mapa de calor: mientras al menos uno de los dos nuisance models esté correctamente especificado ( <span class="math inline">\(\lambda = 0 \ \ ó \ \ \gamma = 0\)</span> ) , el sesgo del estimador DR es aproximadamente cero, y cualquier desviación del sesgo se debe a ruido Monte Carlo. Sin embargo, cuando ambos nuisance models están mal especificados, el sesgo del estimador DR aumenta significativamente. Además, en este último caso, el sesgo del estimador DR converge al valor esperado:</p>
-<p><span class="math display">\[
-\begin{aligned}
-Bias_{DR}
+<p><span class="math display">\[\begin{align*}
+\operatorname{Bias}_{DR}
 &amp;=
 \mathbb{E}_X \left[
 \sum_a
@@ -1066,17 +1001,17 @@ Bias_{DR}
 \\
 &amp;=
 -0.096.
-\end{aligned}
-\]</span></p>
-<p>Sin embargo, en el interior de la matriz, donde ambos nuisance models están mal especificados, perdemos la garantía de doble robustez. A medida que nos alejamos de modelos correctos, el sesgo del estimador DR aumenta.</p>
-<p>En conclusión, ningún estimador domina universalmente, sino que cada uno pierde su garantía bajo ciertas condiciones: DM pierde la garantía de insesgadez si el reward model está mal especificado, IPS y SNIPS pierden la garantía de consistencia si la logging policy está mal especificada, y DR pierde la garantía de doble robustez si ambos nuisance models están mal especificados.</p>
+\end{align*}\]</span></p>
+<p>Sin embargo, en el interior de la matriz, donde ambos nuisance models están mal especificados, deja de cumplirse la doble robustez. A medida que nos alejamos de modelos correctos, el sesgo del estimador DR aumenta.</p>
+<p>En definitiva, ningún estimador domina universalmente, sino que cada uno pierde su “garantía” bajo ciertas condiciones: DM pierde la garantía de insesgadez si el reward model está mal especificado, IPS y SNIPS pierden la garantía de consistencia si la logging policy está mal especificada, y DR pierde la garantía de doble robustez si ambos nuisance models están mal especificados.</p>
+<div style="page-break-after: always;"></div>
 </section>
 </section>
-<section id="estudio-c---violación-de-positividad" class="level1" data-number="6">
-<h1 data-number="6"><span class="header-section-number">6</span> Estudio C - Violación de positividad</h1>
+<section id="estudio-c---violación-de-positivity" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Estudio C - Violación de positivity</h1>
 <section id="pregunta-2" class="level2" data-number="6.1">
 <h2 data-number="6.1" class="anchored" data-anchor-id="pregunta-2"><span class="header-section-number">6.1</span> Pregunta</h2>
-<p>¿Qué pasa si falla la hipótesis de positividad, es decir, si la logging policy no cubre el soporte de la target policy? Si en lugar de tener un solapamiento parcial con <span class="math inline">\(b(a \mid x) &gt; 0\)</span> pero pequeño, la logging policy tuviera probabilidad cero (<span class="math inline">\(b(a \mid x) = 0\)</span>) de tomar ciertas acciones que la target policy sí toma (<span class="math inline">\(\pi(a \mid x) &gt; 0\)</span>), ¿sigue siendo posible estimar el valor de la target policy? Esto es, ¿el valor <span class="math inline">\(V(\pi)\)</span> de la target policy sigue estando identificado por la distribución observable?</p>
+<p>¿Qué pasa si falla la hipótesis de positivity, es decir, si la logging policy no cubre el soporte de la target policy? Si en lugar de tener un solapamiento parcial con <span class="math inline">\(b(a \mid x) &gt; 0\)</span> pero pequeño, la logging policy tuviera probabilidad cero (<span class="math inline">\(b(a \mid x) = 0\)</span>) de tomar ciertas acciones que la target policy sí toma (<span class="math inline">\(\pi(a \mid x) &gt; 0\)</span>), ¿sigue siendo posible estimar el valor de la target policy? Esto es, ¿el valor <span class="math inline">\(V^{\pi}\)</span> de la target policy sigue estando identificado por la distribución observable?</p>
 </section>
 <section id="diseño-2" class="level2" data-number="6.2">
 <h2 data-number="6.2" class="anchored" data-anchor-id="diseño-2"><span class="header-section-number">6.2</span> Diseño</h2>
@@ -1088,7 +1023,7 @@ Bias_{DR}
 <p><span class="math display">\[
 \mu_2 = \begin{pmatrix} 0.2 &amp; 0.3 \\ 0.9 &amp; 0.4 \end{pmatrix}
 \]</span></p>
-<p>siendo un reward model que difiere del primero exactamente donde la logging policy tiene probabilidad cero, de forma que la diferencia no es observable a través de los datos generados por el DGP. Estos reward models generan dos “mundos” diferentes, indistinguibles a partir de los datos observables, pero con valores de la target policy diferentes: <span class="math inline">\(V_1(\pi) = 0.66\)</span> y <span class="math inline">\(V_2(\pi) = 0.54\)</span>. Usamos una única muestra generada por el DGP, compatible con ambos. De hecho, ambos reward models inducen la misma distribución observable de <span class="math inline">\((X,A,R)\)</span> bajo esta logging policy. Las celdas <span class="math inline">\((X,A)\)</span> observadas son <span class="math inline">\((0,0), (1,1)\)</span>, mientras que las no observadas son <span class="math inline">\((0,1), (1,0)\)</span>. Así,</p>
+<p>siendo un reward model que difiere del primero exactamente donde la logging policy tiene probabilidad cero, de forma que la diferencia no es observable a través de los datos generados por el DGP. Estos reward models generan dos “mundos” diferentes, indistinguibles a partir de los datos observables, pero con valores de la target policy diferentes: <span class="math inline">\(V^{\pi}_1 = 0.66\)</span> y <span class="math inline">\(V_2(\pi) = 0.54\)</span>. Usamos una única muestra generada por el DGP, compatible con ambos. De hecho, ambos reward models inducen la misma distribución observable de <span class="math inline">\((X,A,R)\)</span> bajo esta logging policy. Las celdas <span class="math inline">\((X,A)\)</span> observadas son <span class="math inline">\((0,0), (1,1)\)</span>, mientras que las no observadas son <span class="math inline">\((0,1), (1,0)\)</span>. Así,</p>
 <p><span class="math display">\[
 \mu_1(0,0) = \mu_2(0,0) \quad , \quad \mu_1(1,1) = \mu_2(1,1)
 \]</span></p>
@@ -1096,32 +1031,32 @@ Bias_{DR}
 </section>
 <section id="resultados-2" class="level2" data-number="6.3">
 <h2 data-number="6.3" class="anchored" data-anchor-id="resultados-2"><span class="header-section-number">6.3</span> Resultados</h2>
-<div id="0e52e214" class="cell" data-execution_count="5">
+<div id="24ef6109" class="cell" data-execution_count="5">
 <div class="cell-output cell-output-display">
 <style type="text/css">
 </style>
 
-<table id="T_7583d" class="caption-top table table-sm table-striped small">
+<table id="T_23a87" class="caption-top table table-sm table-striped small">
 <thead>
 <tr class="header">
-<th id="T_7583d_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">World</th>
-<th id="T_7583d_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">True target value</th>
-<th id="T_7583d_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">IPS</th>
-<th id="T_7583d_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">SNIPS</th>
+<th id="T_23a87_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">World</th>
+<th id="T_23a87_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">True target value</th>
+<th id="T_23a87_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">IPS</th>
+<th id="T_23a87_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">SNIPS</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td id="T_7583d_row0_col0" class="data row0 col0">World 1</td>
-<td id="T_7583d_row0_col1" class="data row0 col1">0.660000</td>
-<td id="T_7583d_row0_col2" class="data row0 col2">0.060600</td>
-<td id="T_7583d_row0_col3" class="data row0 col3">0.303000</td>
+<td id="T_23a87_row0_col0" class="data row0 col0">World 1</td>
+<td id="T_23a87_row0_col1" class="data row0 col1">0.660000</td>
+<td id="T_23a87_row0_col2" class="data row0 col2">0.060600</td>
+<td id="T_23a87_row0_col3" class="data row0 col3">0.303000</td>
 </tr>
 <tr class="even">
-<td id="T_7583d_row1_col0" class="data row1 col0">World 2</td>
-<td id="T_7583d_row1_col1" class="data row1 col1">0.540000</td>
-<td id="T_7583d_row1_col2" class="data row1 col2">0.060600</td>
-<td id="T_7583d_row1_col3" class="data row1 col3">0.303000</td>
+<td id="T_23a87_row1_col0" class="data row1 col0">World 2</td>
+<td id="T_23a87_row1_col1" class="data row1 col1">0.540000</td>
+<td id="T_23a87_row1_col2" class="data row1 col2">0.060600</td>
+<td id="T_23a87_row1_col3" class="data row1 col3">0.303000</td>
 </tr>
 </tbody>
 </table>
@@ -1131,27 +1066,26 @@ Bias_{DR}
 </section>
 <section id="interpretación-2" class="level2" data-number="6.4">
 <h2 data-number="6.4" class="anchored" data-anchor-id="interpretación-2"><span class="header-section-number">6.4</span> Interpretación</h2>
-<p>Podemos ver que, a pesar de que <span class="math inline">\(\mu_1\)</span> y <span class="math inline">\(\mu_2\)</span> son observacionalmente indistinguibles a ojos de la logging policy, tienen <span class="math inline">\(V^{\pi}\)</span> diferentes. Esto se debe a que el verdadero valor de la política se calcula con las propensiones de la target policy, donde <span class="math inline">\(\mu_1\)</span> y <span class="math inline">\(\mu_2\)</span> sí se distinguen.<br>
-Por tanto, <span class="math inline">\(V^{\pi}\)</span> no está identificado por la distribución observable: todo estimador basado únicamente en los logged data tiene la misma distribución bajo ambos mundos observacionalmente equivalentes, aunque <span class="math inline">\(V_{M_1}(\pi) \neq V_{M_2}(\pi)\)</span>, por lo que ninguno puede ser correcto uniformemente en ambos mundos sin supuestos adicionales <span class="citation" data-cites="khan2024">(<a href="#ref-khan2024" role="doc-biblioref">Khan et&nbsp;al. 2024</a>)</span>.<br>
-Vale la pena comparar este caso de violación de la positividad con el escenario anterior de weak overlap, donde todavía era posible recuperar <span class="math inline">\(V^{\pi}\)</span>, a costa de una mayor varianza en la estimación. Se trataba de un problema de varianza, donde ahora el problema que tenemos es de identificación.<br>
+<p>Podemos ver que, a pesar de que <span class="math inline">\(\mu_1\)</span> y <span class="math inline">\(\mu_2\)</span> son observacionalmente indistinguibles a ojos de la logging policy, tienen <span class="math inline">\(V^{\pi}\)</span> diferentes. Esto se debe a que el verdadero valor de la política se calcula con las propensities de la target policy, donde <span class="math inline">\(\mu_1\)</span> y <span class="math inline">\(\mu_2\)</span> sí se distinguen.<br>
+Por tanto, <span class="math inline">\(V^{\pi}\)</span> no está identificado por la distribución observable: todo estimador basado únicamente en los logged data tiene la misma distribución bajo ambos mundos observacionalmente equivalentes, aunque <span class="math inline">\(V^{\pi}_{M_1} \neq V^{\pi}_{M_2}\)</span>, por lo que ninguno puede ser correcto uniformemente en ambos mundos sin supuestos adicionales <span class="citation" data-cites="khan2024">(<a href="#ref-khan2024" role="doc-biblioref">Khan et&nbsp;al. 2024</a>)</span>.<br>
+Vale la pena comparar este caso de violación de la positivity con el escenario anterior de weak overlap, donde todavía era posible recuperar <span class="math inline">\(V^{\pi}\)</span>, a costa de una mayor varianza en la estimación. Se trataba de un problema de varianza, donde ahora el problema que tenemos es de identificación.<br>
 Vemos también que tanto IPS como SNIPS devuelven valores finitos, pese a que no se pueda evaluar correctamente la política. Esto no es ninguna casualidad: tanto IPS como SNIPS están estimando el valor del objeto incorrecto. En concreto, IPS está evaluando la contribución de la target policy que cae dentro del soporte de b:</p>
-<span class="math display">\[\begin{aligned}
-
+<p><span class="math display">\[\begin{align*}
 \mathbb{E} \left[\hat{V}_{IPS} \right] &amp;= \sum_x p(x) \cdot \left(\sum_{a : b(a \mid x)&gt;0} \pi (a \mid x) \mu(x,a) \right) \\
 &amp;=
 \frac{1}{2}(0.2)(0.2) + \frac{1}{2}(0.2)(0.4) \\
 &amp;= 0.06
-
-\end{aligned}\]</span>
+\end{align*}\]</span></p>
 <p>Como dicha masa (no normalizada) de <span class="math inline">\(\pi\)</span> viene dada por la matriz</p>
 <p><span class="math display">\[
 \begin{pmatrix} 0.2 &amp; 0.0 \\ 0.0 &amp; 0.2\end{pmatrix}
 \]</span></p>
 <p>tenemos que equivale a <span class="math inline">\(\frac{1}{5}\)</span> de la masa de b. Por tanto, en este DGP concreto, como SNIPS normaliza esa masa, SNIPS converge precisamente al valor de b,</p>
 <p><span class="math display">\[
-V(b_{\epsilon = 0}) = \frac{1}{2}(0.2) + \frac{1}{2}(0.4) = 0.3
+V^{b_{\epsilon = 0}} = \frac{1}{2}(0.2) + \frac{1}{2}(0.4) = 0.3
 \]</span></p>
 <p>Nótese que sigue siendo posible calcular tanto IPS como SNIPS sin división por cero, ya que precisamente nunca se llegan a observar los escenarios donde el denominador se anula.</p>
+<div style="page-break-after: always;"></div>
 </section>
 </section>
 <section id="estudio-d---policy-shift" class="level1" data-number="7">
@@ -1166,7 +1100,7 @@ V(b_{\epsilon = 0}) = \frac{1}{2}(0.2) + \frac{1}{2}(0.4) = 0.3
 <p><span class="math display">\[
 \pi_\delta = (1- \delta)b + \delta \pi \quad , \quad \delta \in \{0,0.25,0.5,0.75,1\}
 \]</span></p>
-<p>Se toman, además, los nuisance models correctos, R = 2000 réplicas de tamaño muestral N = 200, y el mismo dataset dentro de cada réplica para cada <span class="math inline">\(\delta\)</span>, y</p>
+<p>Se toman, además, los nuisance models correctos, R = 2000 réplicas de tamaño muestral n= 200, y el mismo dataset dentro de cada réplica para cada <span class="math inline">\(\delta\)</span>, y</p>
 <p><span class="math display">\[
 V^{\pi_\delta} = 0.435 + 0.225\delta
 \]</span></p>
@@ -1174,210 +1108,210 @@ V^{\pi_\delta} = 0.435 + 0.225\delta
 </section>
 <section id="resultados-3" class="level2" data-number="7.3">
 <h2 data-number="7.3" class="anchored" data-anchor-id="resultados-3"><span class="header-section-number">7.3</span> Resultados</h2>
-<div id="7faa7c80" class="cell" data-execution_count="6">
+<div id="0a62acfe" class="cell" data-execution_count="6">
 <div class="cell-output cell-output-display">
 <style type="text/css">
 </style>
 
-<table id="T_9e263" class="caption-top table table-sm table-striped small">
+<table id="T_d28fb" class="caption-top table table-sm table-striped small">
 <thead>
 <tr class="header">
-<th id="T_9e263_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Delta</th>
-<th id="T_9e263_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Estimator</th>
-<th id="T_9e263_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">True value</th>
-<th id="T_9e263_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Mean</th>
-<th id="T_9e263_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">Bias</th>
-<th id="T_9e263_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">Variance</th>
-<th id="T_9e263_level0_col6" class="col_heading level0 col6" data-quarto-table-cell-role="th">MSE</th>
+<th id="T_d28fb_level0_col0" class="col_heading level0 col0" data-quarto-table-cell-role="th">Delta</th>
+<th id="T_d28fb_level0_col1" class="col_heading level0 col1" data-quarto-table-cell-role="th">Estimator</th>
+<th id="T_d28fb_level0_col2" class="col_heading level0 col2" data-quarto-table-cell-role="th">True value</th>
+<th id="T_d28fb_level0_col3" class="col_heading level0 col3" data-quarto-table-cell-role="th">Mean</th>
+<th id="T_d28fb_level0_col4" class="col_heading level0 col4" data-quarto-table-cell-role="th">Bias</th>
+<th id="T_d28fb_level0_col5" class="col_heading level0 col5" data-quarto-table-cell-role="th">Variance</th>
+<th id="T_d28fb_level0_col6" class="col_heading level0 col6" data-quarto-table-cell-role="th">MSE</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td id="T_9e263_row0_col0" class="data row0 col0">0.000000</td>
-<td id="T_9e263_row0_col1" class="data row0 col1">DM</td>
-<td id="T_9e263_row0_col2" class="data row0 col2">0.435000</td>
-<td id="T_9e263_row0_col3" class="data row0 col3">0.435002</td>
-<td id="T_9e263_row0_col4" class="data row0 col4">0.000002</td>
-<td id="T_9e263_row0_col5" class="data row0 col5">0.000015</td>
-<td id="T_9e263_row0_col6" class="data row0 col6">0.000015</td>
+<td id="T_d28fb_row0_col0" class="data row0 col0">0.000000</td>
+<td id="T_d28fb_row0_col1" class="data row0 col1">DM</td>
+<td id="T_d28fb_row0_col2" class="data row0 col2">0.435000</td>
+<td id="T_d28fb_row0_col3" class="data row0 col3">0.435002</td>
+<td id="T_d28fb_row0_col4" class="data row0 col4">0.000002</td>
+<td id="T_d28fb_row0_col5" class="data row0 col5">0.000015</td>
+<td id="T_d28fb_row0_col6" class="data row0 col6">0.000015</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row1_col0" class="data row1 col0">0.000000</td>
-<td id="T_9e263_row1_col1" class="data row1 col1">IPS</td>
-<td id="T_9e263_row1_col2" class="data row1 col2">0.435000</td>
-<td id="T_9e263_row1_col3" class="data row1 col3">0.434730</td>
-<td id="T_9e263_row1_col4" class="data row1 col4">-0.000270</td>
-<td id="T_9e263_row1_col5" class="data row1 col5">0.001214</td>
-<td id="T_9e263_row1_col6" class="data row1 col6">0.001214</td>
+<td id="T_d28fb_row1_col0" class="data row1 col0">0.000000</td>
+<td id="T_d28fb_row1_col1" class="data row1 col1">IPS</td>
+<td id="T_d28fb_row1_col2" class="data row1 col2">0.435000</td>
+<td id="T_d28fb_row1_col3" class="data row1 col3">0.434730</td>
+<td id="T_d28fb_row1_col4" class="data row1 col4">-0.000270</td>
+<td id="T_d28fb_row1_col5" class="data row1 col5">0.001214</td>
+<td id="T_d28fb_row1_col6" class="data row1 col6">0.001214</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row2_col0" class="data row2 col0">0.000000</td>
-<td id="T_9e263_row2_col1" class="data row2 col1">SNIPS</td>
-<td id="T_9e263_row2_col2" class="data row2 col2">0.435000</td>
-<td id="T_9e263_row2_col3" class="data row2 col3">0.434730</td>
-<td id="T_9e263_row2_col4" class="data row2 col4">-0.000270</td>
-<td id="T_9e263_row2_col5" class="data row2 col5">0.001214</td>
-<td id="T_9e263_row2_col6" class="data row2 col6">0.001214</td>
+<td id="T_d28fb_row2_col0" class="data row2 col0">0.000000</td>
+<td id="T_d28fb_row2_col1" class="data row2 col1">SNIPS</td>
+<td id="T_d28fb_row2_col2" class="data row2 col2">0.435000</td>
+<td id="T_d28fb_row2_col3" class="data row2 col3">0.434730</td>
+<td id="T_d28fb_row2_col4" class="data row2 col4">-0.000270</td>
+<td id="T_d28fb_row2_col5" class="data row2 col5">0.001214</td>
+<td id="T_d28fb_row2_col6" class="data row2 col6">0.001214</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row3_col0" class="data row3 col0">0.000000</td>
-<td id="T_9e263_row3_col1" class="data row3 col1">DR</td>
-<td id="T_9e263_row3_col2" class="data row3 col2">0.435000</td>
-<td id="T_9e263_row3_col3" class="data row3 col3">0.434878</td>
-<td id="T_9e263_row3_col4" class="data row3 col4">-0.000122</td>
-<td id="T_9e263_row3_col5" class="data row3 col5">0.000964</td>
-<td id="T_9e263_row3_col6" class="data row3 col6">0.000964</td>
+<td id="T_d28fb_row3_col0" class="data row3 col0">0.000000</td>
+<td id="T_d28fb_row3_col1" class="data row3 col1">DR</td>
+<td id="T_d28fb_row3_col2" class="data row3 col2">0.435000</td>
+<td id="T_d28fb_row3_col3" class="data row3 col3">0.434878</td>
+<td id="T_d28fb_row3_col4" class="data row3 col4">-0.000122</td>
+<td id="T_d28fb_row3_col5" class="data row3 col5">0.000964</td>
+<td id="T_d28fb_row3_col6" class="data row3 col6">0.000964</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row4_col0" class="data row4 col0">0.250000</td>
-<td id="T_9e263_row4_col1" class="data row4 col1">DM</td>
-<td id="T_9e263_row4_col2" class="data row4 col2">0.491250</td>
-<td id="T_9e263_row4_col3" class="data row4 col3">0.491251</td>
-<td id="T_9e263_row4_col4" class="data row4 col4">0.000001</td>
-<td id="T_9e263_row4_col5" class="data row4 col5">0.000006</td>
-<td id="T_9e263_row4_col6" class="data row4 col6">0.000006</td>
+<td id="T_d28fb_row4_col0" class="data row4 col0">0.250000</td>
+<td id="T_d28fb_row4_col1" class="data row4 col1">DM</td>
+<td id="T_d28fb_row4_col2" class="data row4 col2">0.491250</td>
+<td id="T_d28fb_row4_col3" class="data row4 col3">0.491251</td>
+<td id="T_d28fb_row4_col4" class="data row4 col4">0.000001</td>
+<td id="T_d28fb_row4_col5" class="data row4 col5">0.000006</td>
+<td id="T_d28fb_row4_col6" class="data row4 col6">0.000006</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row5_col0" class="data row5 col0">0.250000</td>
-<td id="T_9e263_row5_col1" class="data row5 col1">IPS</td>
-<td id="T_9e263_row5_col2" class="data row5 col2">0.491250</td>
-<td id="T_9e263_row5_col3" class="data row5 col3">0.490777</td>
-<td id="T_9e263_row5_col4" class="data row5 col4">-0.000473</td>
-<td id="T_9e263_row5_col5" class="data row5 col5">0.001773</td>
-<td id="T_9e263_row5_col6" class="data row5 col6">0.001773</td>
+<td id="T_d28fb_row5_col0" class="data row5 col0">0.250000</td>
+<td id="T_d28fb_row5_col1" class="data row5 col1">IPS</td>
+<td id="T_d28fb_row5_col2" class="data row5 col2">0.491250</td>
+<td id="T_d28fb_row5_col3" class="data row5 col3">0.490777</td>
+<td id="T_d28fb_row5_col4" class="data row5 col4">-0.000473</td>
+<td id="T_d28fb_row5_col5" class="data row5 col5">0.001773</td>
+<td id="T_d28fb_row5_col6" class="data row5 col6">0.001773</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row6_col0" class="data row6 col0">0.250000</td>
-<td id="T_9e263_row6_col1" class="data row6 col1">SNIPS</td>
-<td id="T_9e263_row6_col2" class="data row6 col2">0.491250</td>
-<td id="T_9e263_row6_col3" class="data row6 col3">0.490577</td>
-<td id="T_9e263_row6_col4" class="data row6 col4">-0.000673</td>
-<td id="T_9e263_row6_col5" class="data row6 col5">0.001354</td>
-<td id="T_9e263_row6_col6" class="data row6 col6">0.001355</td>
+<td id="T_d28fb_row6_col0" class="data row6 col0">0.250000</td>
+<td id="T_d28fb_row6_col1" class="data row6 col1">SNIPS</td>
+<td id="T_d28fb_row6_col2" class="data row6 col2">0.491250</td>
+<td id="T_d28fb_row6_col3" class="data row6 col3">0.490577</td>
+<td id="T_d28fb_row6_col4" class="data row6 col4">-0.000673</td>
+<td id="T_d28fb_row6_col5" class="data row6 col5">0.001354</td>
+<td id="T_d28fb_row6_col6" class="data row6 col6">0.001355</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row7_col0" class="data row7 col0">0.250000</td>
-<td id="T_9e263_row7_col1" class="data row7 col1">DR</td>
-<td id="T_9e263_row7_col2" class="data row7 col2">0.491250</td>
-<td id="T_9e263_row7_col3" class="data row7 col3">0.491096</td>
-<td id="T_9e263_row7_col4" class="data row7 col4">-0.000154</td>
-<td id="T_9e263_row7_col5" class="data row7 col5">0.001015</td>
-<td id="T_9e263_row7_col6" class="data row7 col6">0.001015</td>
+<td id="T_d28fb_row7_col0" class="data row7 col0">0.250000</td>
+<td id="T_d28fb_row7_col1" class="data row7 col1">DR</td>
+<td id="T_d28fb_row7_col2" class="data row7 col2">0.491250</td>
+<td id="T_d28fb_row7_col3" class="data row7 col3">0.491096</td>
+<td id="T_d28fb_row7_col4" class="data row7 col4">-0.000154</td>
+<td id="T_d28fb_row7_col5" class="data row7 col5">0.001015</td>
+<td id="T_d28fb_row7_col6" class="data row7 col6">0.001015</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row8_col0" class="data row8 col0">0.500000</td>
-<td id="T_9e263_row8_col1" class="data row8 col1">DM</td>
-<td id="T_9e263_row8_col2" class="data row8 col2">0.547500</td>
-<td id="T_9e263_row8_col3" class="data row8 col3">0.547501</td>
-<td id="T_9e263_row8_col4" class="data row8 col4">0.000001</td>
-<td id="T_9e263_row8_col5" class="data row8 col5">0.000001</td>
-<td id="T_9e263_row8_col6" class="data row8 col6">0.000001</td>
+<td id="T_d28fb_row8_col0" class="data row8 col0">0.500000</td>
+<td id="T_d28fb_row8_col1" class="data row8 col1">DM</td>
+<td id="T_d28fb_row8_col2" class="data row8 col2">0.547500</td>
+<td id="T_d28fb_row8_col3" class="data row8 col3">0.547501</td>
+<td id="T_d28fb_row8_col4" class="data row8 col4">0.000001</td>
+<td id="T_d28fb_row8_col5" class="data row8 col5">0.000001</td>
+<td id="T_d28fb_row8_col6" class="data row8 col6">0.000001</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row9_col0" class="data row9 col0">0.500000</td>
-<td id="T_9e263_row9_col1" class="data row9 col1">IPS</td>
-<td id="T_9e263_row9_col2" class="data row9 col2">0.547500</td>
-<td id="T_9e263_row9_col3" class="data row9 col3">0.546823</td>
-<td id="T_9e263_row9_col4" class="data row9 col4">-0.000677</td>
-<td id="T_9e263_row9_col5" class="data row9 col5">0.002764</td>
-<td id="T_9e263_row9_col6" class="data row9 col6">0.002764</td>
+<td id="T_d28fb_row9_col0" class="data row9 col0">0.500000</td>
+<td id="T_d28fb_row9_col1" class="data row9 col1">IPS</td>
+<td id="T_d28fb_row9_col2" class="data row9 col2">0.547500</td>
+<td id="T_d28fb_row9_col3" class="data row9 col3">0.546823</td>
+<td id="T_d28fb_row9_col4" class="data row9 col4">-0.000677</td>
+<td id="T_d28fb_row9_col5" class="data row9 col5">0.002764</td>
+<td id="T_d28fb_row9_col6" class="data row9 col6">0.002764</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row10_col0" class="data row10 col0">0.500000</td>
-<td id="T_9e263_row10_col1" class="data row10 col1">SNIPS</td>
-<td id="T_9e263_row10_col2" class="data row10 col2">0.547500</td>
-<td id="T_9e263_row10_col3" class="data row10 col3">0.546435</td>
-<td id="T_9e263_row10_col4" class="data row10 col4">-0.001065</td>
-<td id="T_9e263_row10_col5" class="data row10 col5">0.001565</td>
-<td id="T_9e263_row10_col6" class="data row10 col6">0.001567</td>
+<td id="T_d28fb_row10_col0" class="data row10 col0">0.500000</td>
+<td id="T_d28fb_row10_col1" class="data row10 col1">SNIPS</td>
+<td id="T_d28fb_row10_col2" class="data row10 col2">0.547500</td>
+<td id="T_d28fb_row10_col3" class="data row10 col3">0.546435</td>
+<td id="T_d28fb_row10_col4" class="data row10 col4">-0.001065</td>
+<td id="T_d28fb_row10_col5" class="data row10 col5">0.001565</td>
+<td id="T_d28fb_row10_col6" class="data row10 col6">0.001567</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row11_col0" class="data row11 col0">0.500000</td>
-<td id="T_9e263_row11_col1" class="data row11 col1">DR</td>
-<td id="T_9e263_row11_col2" class="data row11 col2">0.547500</td>
-<td id="T_9e263_row11_col3" class="data row11 col3">0.547314</td>
-<td id="T_9e263_row11_col4" class="data row11 col4">-0.000186</td>
-<td id="T_9e263_row11_col5" class="data row11 col5">0.001203</td>
-<td id="T_9e263_row11_col6" class="data row11 col6">0.001203</td>
+<td id="T_d28fb_row11_col0" class="data row11 col0">0.500000</td>
+<td id="T_d28fb_row11_col1" class="data row11 col1">DR</td>
+<td id="T_d28fb_row11_col2" class="data row11 col2">0.547500</td>
+<td id="T_d28fb_row11_col3" class="data row11 col3">0.547314</td>
+<td id="T_d28fb_row11_col4" class="data row11 col4">-0.000186</td>
+<td id="T_d28fb_row11_col5" class="data row11 col5">0.001203</td>
+<td id="T_d28fb_row11_col6" class="data row11 col6">0.001203</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row12_col0" class="data row12 col0">0.750000</td>
-<td id="T_9e263_row12_col1" class="data row12 col1">DM</td>
-<td id="T_9e263_row12_col2" class="data row12 col2">0.603750</td>
-<td id="T_9e263_row12_col3" class="data row12 col3">0.603750</td>
-<td id="T_9e263_row12_col4" class="data row12 col4">-0.000000</td>
-<td id="T_9e263_row12_col5" class="data row12 col5">0.000000</td>
-<td id="T_9e263_row12_col6" class="data row12 col6">0.000000</td>
+<td id="T_d28fb_row12_col0" class="data row12 col0">0.750000</td>
+<td id="T_d28fb_row12_col1" class="data row12 col1">DM</td>
+<td id="T_d28fb_row12_col2" class="data row12 col2">0.603750</td>
+<td id="T_d28fb_row12_col3" class="data row12 col3">0.603750</td>
+<td id="T_d28fb_row12_col4" class="data row12 col4">-0.000000</td>
+<td id="T_d28fb_row12_col5" class="data row12 col5">0.000000</td>
+<td id="T_d28fb_row12_col6" class="data row12 col6">0.000000</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row13_col0" class="data row13 col0">0.750000</td>
-<td id="T_9e263_row13_col1" class="data row13 col1">IPS</td>
-<td id="T_9e263_row13_col2" class="data row13 col2">0.603750</td>
-<td id="T_9e263_row13_col3" class="data row13 col3">0.602870</td>
-<td id="T_9e263_row13_col4" class="data row13 col4">-0.000880</td>
-<td id="T_9e263_row13_col5" class="data row13 col5">0.004187</td>
-<td id="T_9e263_row13_col6" class="data row13 col6">0.004188</td>
+<td id="T_d28fb_row13_col0" class="data row13 col0">0.750000</td>
+<td id="T_d28fb_row13_col1" class="data row13 col1">IPS</td>
+<td id="T_d28fb_row13_col2" class="data row13 col2">0.603750</td>
+<td id="T_d28fb_row13_col3" class="data row13 col3">0.602870</td>
+<td id="T_d28fb_row13_col4" class="data row13 col4">-0.000880</td>
+<td id="T_d28fb_row13_col5" class="data row13 col5">0.004187</td>
+<td id="T_d28fb_row13_col6" class="data row13 col6">0.004188</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row14_col0" class="data row14 col0">0.750000</td>
-<td id="T_9e263_row14_col1" class="data row14 col1">SNIPS</td>
-<td id="T_9e263_row14_col2" class="data row14 col2">0.603750</td>
-<td id="T_9e263_row14_col3" class="data row14 col3">0.602427</td>
-<td id="T_9e263_row14_col4" class="data row14 col4">-0.001323</td>
-<td id="T_9e263_row14_col5" class="data row14 col5">0.001841</td>
-<td id="T_9e263_row14_col6" class="data row14 col6">0.001843</td>
+<td id="T_d28fb_row14_col0" class="data row14 col0">0.750000</td>
+<td id="T_d28fb_row14_col1" class="data row14 col1">SNIPS</td>
+<td id="T_d28fb_row14_col2" class="data row14 col2">0.603750</td>
+<td id="T_d28fb_row14_col3" class="data row14 col3">0.602427</td>
+<td id="T_d28fb_row14_col4" class="data row14 col4">-0.001323</td>
+<td id="T_d28fb_row14_col5" class="data row14 col5">0.001841</td>
+<td id="T_d28fb_row14_col6" class="data row14 col6">0.001843</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row15_col0" class="data row15 col0">0.750000</td>
-<td id="T_9e263_row15_col1" class="data row15 col1">DR</td>
-<td id="T_9e263_row15_col2" class="data row15 col2">0.603750</td>
-<td id="T_9e263_row15_col3" class="data row15 col3">0.603533</td>
-<td id="T_9e263_row15_col4" class="data row15 col4">-0.000217</td>
-<td id="T_9e263_row15_col5" class="data row15 col5">0.001529</td>
-<td id="T_9e263_row15_col6" class="data row15 col6">0.001529</td>
+<td id="T_d28fb_row15_col0" class="data row15 col0">0.750000</td>
+<td id="T_d28fb_row15_col1" class="data row15 col1">DR</td>
+<td id="T_d28fb_row15_col2" class="data row15 col2">0.603750</td>
+<td id="T_d28fb_row15_col3" class="data row15 col3">0.603533</td>
+<td id="T_d28fb_row15_col4" class="data row15 col4">-0.000217</td>
+<td id="T_d28fb_row15_col5" class="data row15 col5">0.001529</td>
+<td id="T_d28fb_row15_col6" class="data row15 col6">0.001529</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row16_col0" class="data row16 col0">1.000000</td>
-<td id="T_9e263_row16_col1" class="data row16 col1">DM</td>
-<td id="T_9e263_row16_col2" class="data row16 col2">0.660000</td>
-<td id="T_9e263_row16_col3" class="data row16 col3">0.659999</td>
-<td id="T_9e263_row16_col4" class="data row16 col4">-0.000001</td>
-<td id="T_9e263_row16_col5" class="data row16 col5">0.000002</td>
-<td id="T_9e263_row16_col6" class="data row16 col6">0.000002</td>
+<td id="T_d28fb_row16_col0" class="data row16 col0">1.000000</td>
+<td id="T_d28fb_row16_col1" class="data row16 col1">DM</td>
+<td id="T_d28fb_row16_col2" class="data row16 col2">0.660000</td>
+<td id="T_d28fb_row16_col3" class="data row16 col3">0.659999</td>
+<td id="T_d28fb_row16_col4" class="data row16 col4">-0.000001</td>
+<td id="T_d28fb_row16_col5" class="data row16 col5">0.000002</td>
+<td id="T_d28fb_row16_col6" class="data row16 col6">0.000002</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row17_col0" class="data row17 col0">1.000000</td>
-<td id="T_9e263_row17_col1" class="data row17 col1">IPS</td>
-<td id="T_9e263_row17_col2" class="data row17 col2">0.660000</td>
-<td id="T_9e263_row17_col3" class="data row17 col3">0.658917</td>
-<td id="T_9e263_row17_col4" class="data row17 col4">-0.001083</td>
-<td id="T_9e263_row17_col5" class="data row17 col5">0.006043</td>
-<td id="T_9e263_row17_col6" class="data row17 col6">0.006044</td>
+<td id="T_d28fb_row17_col0" class="data row17 col0">1.000000</td>
+<td id="T_d28fb_row17_col1" class="data row17 col1">IPS</td>
+<td id="T_d28fb_row17_col2" class="data row17 col2">0.660000</td>
+<td id="T_d28fb_row17_col3" class="data row17 col3">0.658917</td>
+<td id="T_d28fb_row17_col4" class="data row17 col4">-0.001083</td>
+<td id="T_d28fb_row17_col5" class="data row17 col5">0.006043</td>
+<td id="T_d28fb_row17_col6" class="data row17 col6">0.006044</td>
 </tr>
 <tr class="odd">
-<td id="T_9e263_row18_col0" class="data row18 col0">1.000000</td>
-<td id="T_9e263_row18_col1" class="data row18 col1">SNIPS</td>
-<td id="T_9e263_row18_col2" class="data row18 col2">0.660000</td>
-<td id="T_9e263_row18_col3" class="data row18 col3">0.658685</td>
-<td id="T_9e263_row18_col4" class="data row18 col4">-0.001315</td>
-<td id="T_9e263_row18_col5" class="data row18 col5">0.002205</td>
-<td id="T_9e263_row18_col6" class="data row18 col6">0.002207</td>
+<td id="T_d28fb_row18_col0" class="data row18 col0">1.000000</td>
+<td id="T_d28fb_row18_col1" class="data row18 col1">SNIPS</td>
+<td id="T_d28fb_row18_col2" class="data row18 col2">0.660000</td>
+<td id="T_d28fb_row18_col3" class="data row18 col3">0.658685</td>
+<td id="T_d28fb_row18_col4" class="data row18 col4">-0.001315</td>
+<td id="T_d28fb_row18_col5" class="data row18 col5">0.002205</td>
+<td id="T_d28fb_row18_col6" class="data row18 col6">0.002207</td>
 </tr>
 <tr class="even">
-<td id="T_9e263_row19_col0" class="data row19 col0">1.000000</td>
-<td id="T_9e263_row19_col1" class="data row19 col1">DR</td>
-<td id="T_9e263_row19_col2" class="data row19 col2">0.660000</td>
-<td id="T_9e263_row19_col3" class="data row19 col3">0.659751</td>
-<td id="T_9e263_row19_col4" class="data row19 col4">-0.000249</td>
-<td id="T_9e263_row19_col5" class="data row19 col5">0.001992</td>
-<td id="T_9e263_row19_col6" class="data row19 col6">0.001992</td>
+<td id="T_d28fb_row19_col0" class="data row19 col0">1.000000</td>
+<td id="T_d28fb_row19_col1" class="data row19 col1">DR</td>
+<td id="T_d28fb_row19_col2" class="data row19 col2">0.660000</td>
+<td id="T_d28fb_row19_col3" class="data row19 col3">0.659751</td>
+<td id="T_d28fb_row19_col4" class="data row19 col4">-0.000249</td>
+<td id="T_d28fb_row19_col5" class="data row19 col5">0.001992</td>
+<td id="T_d28fb_row19_col6" class="data row19 col6">0.001992</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
 <p>&nbsp;</p>
-<div id="e05c6ebe" class="cell" data-execution_count="7">
+<div id="70cf9f5e" class="cell" data-execution_count="7">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1411,42 +1345,46 @@ g_\delta(1) - g_\delta(0) = 0.11 - 0.15\delta
 \]</span></p>
 <p>y se anula en <span class="math inline">\(\delta \approx 0.7333\)</span>. Justo por eso alrededor de <span class="math inline">\(\delta = 0.75\)</span>, <span class="math inline">\(g_\delta(X)\)</span> es casi constante independientemente de <span class="math inline">\(X\)</span>, y la varianza Monte Carlo de DM prácticamente desaparece.</p>
 <p>Además, el MSE sigue prácticamente a la varianza porque los sesgos son pequeños, salvo que SNIPS añade además un pequeño componente debido a su sesgo de muestra finita.</p>
-<p>Aunque el sesgo Monte Carlo observado de IPS y DR se hace progresivamente más negativo, esto no representa un sesgo poblacional creciente: ambos son insesgados bajo las condiciones de este experimento. La forma aproximadamente lineal (exactamente lineal salvo redondeo para IPS y DR) surge porque <span class="math inline">\(\pi_\delta, V(\pi_\delta)\)</span> y ambos estimadores son lineales en <span class="math inline">\(\delta\)</span>, y se utilizan las mismas réplicas para todos los valores de <span class="math inline">\(\delta\)</span>. Los pequeños sesgos negativos observados son, por tanto, error Monte Carlo.</p>
-<p>Conviene hacer una comparación con el Estudio A, donde se variaba la logging policy <span class="math inline">\(b\)</span> hacia propensiones pequeñas con <span class="math inline">\(\pi\)</span> fija. Ahora, en cambio, se mantiene <span class="math inline">\(b\)</span> fija y se desplaza <span class="math inline">\(\pi\)</span>. Ambos muestran que la dispersión de los ratios <span class="math inline">\(\frac{\pi(a \mid x)}{b(a \mid x)}\)</span> es lo que genera el problema de varianza para los estimadores basados en weighting, no simplemente el tener políticas distintas.</p>
+<p>Aunque el sesgo Monte Carlo observado de IPS y DR se hace progresivamente más negativo, esto no representa un sesgo poblacional creciente: ambos son insesgados bajo las condiciones de este experimento. La forma aproximadamente lineal (exactamente lineal salvo redondeo para IPS y DR) surge porque <span class="math inline">\(\pi_\delta, V^{\pi_\delta}\)</span> y ambos estimadores son lineales en <span class="math inline">\(\delta\)</span>, y se utilizan las mismas réplicas para todos los valores de <span class="math inline">\(\delta\)</span>. Los pequeños sesgos negativos observados son, por tanto, error Monte Carlo.</p>
+<p>Conviene hacer una comparación con el Estudio A, donde se variaba la logging policy <span class="math inline">\(b\)</span> hacia propensities pequeñas con <span class="math inline">\(\pi\)</span> fija. Ahora, en cambio, se mantiene <span class="math inline">\(b\)</span> fija y se desplaza <span class="math inline">\(\pi\)</span>. Ambos muestran que la dispersión de los ratios <span class="math inline">\(\frac{\pi(a \mid x)}{b(a \mid x)}\)</span> es lo que genera el problema de varianza para los estimadores basados en weighting, no simplemente el tener políticas distintas.</p>
+<div style="page-break-after: always;"></div>
 </section>
 </section>
 <section id="síntesis-y-discusión" class="level1" data-number="8">
 <h1 data-number="8"><span class="header-section-number">8</span> Síntesis y discusión</h1>
 <p>A lo largo de los cuatro estudios, se han observado los siguientes patrones:</p>
 <p>Bajo positivity, tanto misspecification como weak overlap y policy shift pueden generar problemas de sesgo/varianza/consistencia.</p>
-<p>Misspecification del reward model <span class="math inline">\(\hat{\mu}\)</span> afecta a la garantía de insesgadez de DM, mientras que misspecification del logging policy model <span class="math inline">\(\hat{b}\)</span> afecta a la insesgadez (y por tanto consistencia) de IPS, y a la consistencia de SNIPS, ya que este último no partía de insesgadez en muestra finita en general. Misspecification solo afecta a la garantía de doble robustez de DR cuando ambos nuisance models son incorrectos.</p>
-<p>Tanto weak overlap como policy shift afectan a la dispersión de los pesos <span class="math inline">\(\frac{\pi}{b}\)</span>, y con ello a la varianza de los estimadores que utilizan propensiones: IPS, SNIPS y DR. Policy shift además, al modificar la target policy <span class="math inline">\(\pi\)</span>, puede afectar a la varianza de DM.</p>
-<p>Si se viola la positivity, el problema pasa de ser de estimación a identificación. El verdadero valor de la política objetivo <span class="math inline">\(V(\pi)\)</span> deja de estar identificado por la distribución observable, ya que todo estimador basado únicamente en los logged data tendrá la misma distribución de estimadores en dos mundos <span class="math inline">\(M_1\)</span> y <span class="math inline">\(M_2\)</span> distintos, con reward models <span class="math inline">\(\mu_1\)</span> y <span class="math inline">\(\mu_2\)</span> distintos, y por tanto con valores <span class="math inline">\(V_{M_1}(\pi)\)</span> y <span class="math inline">\(V_{M_2}(\pi)\)</span> distintos, pero observacionalmente indistinguibles. Por tanto, ningún estimador basado únicamente en los logged data puede recuperar <span class="math inline">\(V(\pi)\)</span> uniformemente sin supuestos adicionales.</p>
+<p>Misspecification del reward model <span class="math inline">\(\hat{\mu}\)</span> afecta a la propiedad de insesgadez de DM, mientras que misspecification del logging policy model <span class="math inline">\(\hat{b}\)</span> afecta a la insesgadez (y por tanto consistencia) de IPS, y a la consistencia de SNIPS, ya que este último no partía de insesgadez en muestra finita en general. Misspecification solo afecta a la propiedad de doble robustez de DR cuando ambos nuisance models son incorrectos.</p>
+<p>Tanto weak overlap como policy shift afectan a la dispersión de los pesos <span class="math inline">\(\frac{\pi}{b}\)</span>, y con ello a la varianza de los estimadores que utilizan propensities: IPS, SNIPS y DR. Policy shift además, al modificar la target policy <span class="math inline">\(\pi\)</span>, puede afectar a la varianza de DM.</p>
+<p>Si se viola la positivity, el problema pasa de ser de estimación a identificación. El verdadero valor de la target policy <span class="math inline">\(V^{\pi}\)</span> deja de estar identificado por la distribución observable, ya que todo estimador basado únicamente en los logged data tendrá la misma distribución de estimadores en dos mundos <span class="math inline">\(M_1\)</span> y <span class="math inline">\(M_2\)</span> distintos, con reward models <span class="math inline">\(\mu_1\)</span> y <span class="math inline">\(\mu_2\)</span> distintos, y por tanto con valores <span class="math inline">\(V^{\pi}_{M_1}\)</span> y <span class="math inline">\(V^{\pi}_{M_2}\)</span> distintos, pero observacionalmente indistinguibles. Por tanto, ningún estimador basado únicamente en los logged data puede recuperar <span class="math inline">\(V^{\pi}\)</span> uniformemente sin supuestos adicionales.</p>
 <p>Además, una conclusión importante es que no existe una dominancia universal entre los estimadores: cada uno intercambia dependencia del reward model, propensities, sesgo y varianza de forma distinta. Resumiendo:</p>
 <p>DM no usa importance weights, así que no sufre directamente de problemas de varianza por weak overlap, pero depende enteramente de <span class="math inline">\(\mu\)</span>, y por tanto es sensible a misspecification del reward model.</p>
-<p>IPS tiene una garantía de insesgadez con <span class="math inline">\(b\)</span> correcta y positivity, y no necesita reward model. Sin embargo, puede tener enorme varianza cuando <span class="math inline">\(\frac{\pi}{b}\)</span> se dispersa, y pierde esa garantía si <span class="math inline">\(\hat{b}\)</span> está mal especificada.</p>
-<p>SNIPS es una versión normalizada de IPS, que puede reducir la varianza a costa de un sesgo de muestra finita; en nuestros experimentos lo hace sustancialmente. También pierde la garantía de consistencia si <span class="math inline">\(\hat{b}\)</span> está mal especificada.</p>
-<p>DR combina ambos enfoques y conserva la garantía si al menos uno de los nuisance models está correctamente especificado. Sin embargo, sigue usando importance weights, así que weak overlap y policy shift afectan a su varianza. Además, si ambos nuisance models están mal especificados, pierde la propiedad de doble robustez y puede aparecer sesgo. Además, exige modelar dos objetos en vez de uno.</p>
+<p>IPS es insesgado con <span class="math inline">\(b\)</span> correcta y positivity, y no necesita reward model. Sin embargo, puede tener enorme varianza cuando <span class="math inline">\(\frac{\pi}{b}\)</span> se dispersa, y la insesgadez se ve comprometida si <span class="math inline">\(\hat{b}\)</span> está mal especificada.</p>
+<p>SNIPS es una versión normalizada de IPS, que puede reducir la varianza a costa de un sesgo de muestra finita; en nuestros experimentos lo hace sustancialmente. También pierde la propiedad de consistencia si <span class="math inline">\(\hat{b}\)</span> está mal especificada.</p>
+<p>DR combina ambos enfoques y conserva la insesgadez si al menos uno de los nuisance models está correctamente especificado. Sin embargo, sigue usando importance weights, así que weak overlap y policy shift afectan a su varianza. Asimismo, si ambos nuisance models están mal especificados, pierde la propiedad de doble robustez y puede aparecer sesgo. Por otro lado, exige modelar dos objetos en vez de uno.</p>
+<div style="page-break-after: always;"></div>
 </section>
 <section id="limitaciones" class="level1" data-number="9">
 <h1 data-number="9"><span class="header-section-number">9</span> Limitaciones</h1>
 <ol type="1">
 <li><p><strong>Simplicidad:</strong> El DGP es deliberadamente simple, con dos contextos, dos acciones y recompensas Bernoulli. Esto nos permite tener mayor control de la teoría detrás de los estimadores y los experimentos, pero deja abierta la cuestión de qué sucede en el caso que X sea continuo (o de muy alta dimensión), que tengamos muchas más acciones, y reward functions más complejas.</p></li>
-<li><p><strong>Control:</strong> La misspecification se introduce artificialmente mediante matrices e interpolaciones conocidas, lo cual permite aislar causalmente el mecanismo, pero no reproduce del todo lo que ocurre cuando <span class="math inline">\(\hat{\mu}\)</span> y <span class="math inline">\(\hat{b}\)</span> son modelos aprendidos con error de estimación, regularización y capacidad finita.</p></li>
-<li><p><strong>Propensiones conocidas:</strong> Gran parte del análisis usa b verdadera, o una <span class="math inline">\(\hat{b}\)</span> controlada, mientras que en aplicaciones reales, las propensiones pueden estar estimadas, registradas con error o incluso ser desconocidas.</p></li>
+<li><p><strong>Control:</strong> La misspecification se introduce artificialmente mediante matrices e interpolaciones conocidas, lo cual permite aislar el efecto de la misspecification, pero no reproduce del todo lo que ocurre cuando <span class="math inline">\(\hat{\mu}\)</span> y <span class="math inline">\(\hat{b}\)</span> son modelos aprendidos con error de estimación, regularización y capacidad finita.</p></li>
+<li><p><strong>Propensities conocidas:</strong> Gran parte del análisis usa b verdadera, o una <span class="math inline">\(\hat{b}\)</span> controlada, mientras que en aplicaciones reales, las propensities pueden estar estimadas, registradas con error o incluso ser desconocidas.</p></li>
 <li><p><strong>Estimadores.</strong> El análisis se restringe a DM, IPS, SNIPS y DR. Estos cuatro estimadores representan mecanismos fundamentales de modelado, importance weighting, normalización y doble robustez, pero no agotan los métodos existentes de OPE.</p></li>
 <li><p><strong>Datos i.i.d.:</strong> Todos los escenarios parten de observaciones independientes e idénticamente distribuidas. No se estudia dependencia temporal, decisiones secuenciales ni RL en general.</p></li>
 </ol>
+<div style="page-break-after: always;"></div>
 </section>
 <section id="conclusión" class="level1" data-number="10">
 <h1 data-number="10"><span class="header-section-number">10</span> Conclusión</h1>
-<p>En este informe se han estudiado cuatro estimadores del valor de una política objetivo en evaluación offline de contextual bandits —DM, IPS, SNIPS y DR—, combinando análisis teórico y experimentos sintéticos bajo misspecification de los nuisance models, weak overlap, policy shift y violación de positivity.</p>
-<p>Bajo positivity, aparecen dos mecanismos principales de fallo. Por un lado, la misspecification de los nuisance models puede hacer que los estimadores pierdan sus garantías de sesgo o consistencia. Por otro, la dispersión de los importance weights <span class="math inline">\(\frac{\pi}{b}\)</span>, ya sea inducida por weak overlap o por policy shift, deteriora la varianza de los estimadores basados en reponderación. Cuando positivity deja de cumplirse, el problema cambia cualitativamente: <span class="math inline">\(V(\pi)\)</span> puede dejar de estar identificado por la distribución observable de los logged data.</p>
+<p>En este informe se han estudiado cuatro estimadores del valor de una target policy en evaluación offline de contextual bandits —DM, IPS, SNIPS y DR—, combinando análisis teórico y experimentos sintéticos bajo misspecification de los nuisance models, weak overlap, policy shift y violación de positivity.</p>
+<p>Bajo positivity, aparecen dos mecanismos principales de fallo. Por un lado, la misspecification de los nuisance models puede hacer que los estimadores pierdan sus garantías de sesgo o consistencia. Por otro, la dispersión de los importance weights <span class="math inline">\(\frac{\pi}{b}\)</span>, ya sea inducida por weak overlap o por policy shift, deteriora la varianza de los estimadores basados en reponderación. Cuando positivity deja de cumplirse, el problema cambia cualitativamente: <span class="math inline">\(V^{\pi}\)</span> puede dejar de estar identificado por la distribución observable de los logged data.</p>
 <p>Los resultados también muestran que no existe un estimador universalmente dominante. Cada método responde de forma distinta a errores de modelado, propensidades y dispersión de los pesos, por lo que su comportamiento depende del régimen considerado. La simplicidad del laboratorio sintético permitió aislar estos mecanismos y relacionar directamente teoría y resultados empíricos, aunque los valores cuantitativos concretos no deben interpretarse como universales fuera del DGP estudiado.</p>
-
+<div style="page-break-after: always;"></div>
 </section>
-
-<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">Referencias</h2><div id="refs" class="references csl-bib-body hanging-indent" role="list">
+<section id="referencias" class="level1 unnumbered">
+<h1 class="unnumbered">Referencias</h1>
+<div id="refs" class="references csl-bib-body hanging-indent" role="list">
 <div id="ref-dudik2011" class="csl-entry" role="listitem">
 Dudík, Miroslav, John Langford, y Lihong Li. 2011. <span>«Doubly Robust Policy Evaluation and Learning»</span>. <em>Proceedings of the 28th International Conference on Machine Learning</em>, 1097-104. <a href="https://icml.cc/2011/papers/554_icmlpaper.pdf">https://icml.cc/2011/papers/554_icmlpaper.pdf</a>.
 </div>
@@ -1460,12 +1398,15 @@ Khan, Samir, Martin Saveski, y Johan Ugander. 2024. <span>«Off-policy Evaluatio
 Li, Lihong, Wei Chu, John Langford, y Xuanhui Wang. 2011. <span>«Unbiased Offline Evaluation of Contextual-bandit-based News Article Recommendation Algorithms»</span>. <em>Proceedings of the Fourth ACM International Conference on Web Search and Data Mining</em>, 297-306. <a href="https://doi.org/10.1145/1935826.1935878">https://doi.org/10.1145/1935826.1935878</a>.
 </div>
 <div id="ref-swaminathan2015" class="csl-entry" role="listitem">
-Swaminathan, Adith, y Thorsten Joachims. 2015. <span>«The Self-Normalized Estimator for Counterfactual Learning»</span>. <em>Advances in Neural Information Processing Systems</em> 28. <a href="https://proceedings.neurips.cc/paper/2015/hash/39027dfad5138c9ca0c474d71db915c3-Abstract.html">https://proceedings.neurips.cc/paper/2015/hash/39027dfad5138c9ca0c474d71db915c3-Abstract.html</a>.
+Swaminathan, Adith, y Thorsten Joachims. 2015. <span>«The Self-Normalized Estimator for Counterfactual Learning»</span>. <em>Advances in Neural Information Processing Systems</em> 28: 3231-39. <a href="https://proceedings.neurips.cc/paper/2015/hash/39027dfad5138c9ca0c474d71db915c3-Abstract.html">https://proceedings.neurips.cc/paper/2015/hash/39027dfad5138c9ca0c474d71db915c3-Abstract.html</a>.
 </div>
 <div id="ref-wang2017" class="csl-entry" role="listitem">
 Wang, Yu-Xiang, Alekh Agarwal, y Miroslav Dudík. 2017. <span>«Optimal and Adaptive Off-policy Evaluation in Contextual Bandits»</span>. <em>Proceedings of the 34th International Conference on Machine Learning</em>, Proceedings of Machine Learning Research, vol. 70: 3589-97. <a href="https://proceedings.mlr.press/v70/wang17a.html">https://proceedings.mlr.press/v70/wang17a.html</a>.
 </div>
-</div></section></div></main>
+</div>
+</section>
+
+</main>
 <!-- /main column -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {

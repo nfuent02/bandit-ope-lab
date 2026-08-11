@@ -1,42 +1,153 @@
 ---
-title: "Anatomía empírica de estimadores de Offline Policy Evaluation (OPE)"
+title: "Anatomía empírica de estimadores de Off-Policy Evaluation (OPE)"
+author: "Noé Fuentes"
+date: "2026-08-10"
 lang: es
-format:
-  html:
-    toc: true
-    toc-depth: 3
-    number-sections: true
-    code-fold: true
+bibliography: references.bib
+link-citations: true
+format: html
+toc: true
+toc-depth: 3
+number-sections: true
+code-fold: true
 jupyter: python3
 ---
 
+# Introducción
+
+## Motivación
+
+En muchos problemas de decisión, tenemos una política que selecciona una acción en función de la información disponible sobre cada individuo o situación. En un contextual bandit, esta información se representa mediante un contexto $X$, a partir del cual se selecciona una acción $A$ y posteriormente se observa una recompensa $R$.
+
+Una cuestión habitual consiste en evaluar una nueva política antes de desplegarla. La forma más directa de hacerlo sería ejecutarla y observar las recompensas obtenidas, pero esto puede ser costoso, lento o arriesgado. La evaluación offline de políticas (*Off-Policy Evaluation*, OPE) busca estimar el valor de una política objetivo utilizando datos recogidos previamente por otra política [@li2011; @dudik2011].
+
+El problema aparece, por ejemplo, en sistemas de recomendación, publicidad online o experimentación adaptativa, donde pueden existir grandes cantidades de interacciones registradas pero resulta indeseable desplegar cada nueva política únicamente para conocer su rendimiento.
+
+## Planteamiento del problema
+
+Sea $\mathcal{X}$ el espacio de contextos y sea $\mathcal{A}$ un espacio finito de acciones. Una política estocástica es una aplicación
+
+$$
+\pi : \mathcal{X} \to \Delta(\mathcal{A}),
+$$
+
+donde $\Delta(\mathcal{A})$ denota el conjunto de distribuciones de probabilidad sobre $\mathcal{A}$. Para cada contexto $x$, la cantidad $\pi(a \mid x)$ representa por tanto la probabilidad de seleccionar la acción $a$ bajo la política $\pi$.
+
+Distinguimos dos políticas. La **logging policy**
+
+$$
+b : \mathcal{X} \to \Delta(\mathcal{A})
+$$
+
+es la política que genera las acciones observadas en los datos, mientras que la **target policy**
+
+$$
+\pi : \mathcal{X} \to \Delta(\mathcal{A})
+$$
+
+es la política cuyo valor queremos evaluar.
+
+El proceso generador de una observación puede describirse como
+
+$$
+X \sim P_X,
+\qquad
+A\mid X=x \sim b(\cdot|x),
+\qquad
+R\mid X=x,A=a \sim P_R(\cdot|x,a).
+$$
+
+Definimos la función de recompensa condicional
+
+$$
+\mu(x,a)
+=
+\mathbb{E}[R\mid X=x,A=a].
+$$
+
+El valor de una política $\pi$ se define como la recompensa esperada que se obtendría si, manteniendo la misma distribución de contextos y de recompensas condicionadas a contexto y acción, las acciones fueran seleccionadas según $\pi$:
+
+$$
+V^{\pi}
+=
+\mathbb{E}_{X\sim P_X}
+\left[
+\sum_{a\in\mathcal A}
+\pi(a \mid X)\mu(X,a)
+\right].
+$$
+
+Disponemos únicamente de un conjunto de logged data
+
+$$
+D=\{(X_i,A_i,R_i)\}_{i=1}^n
+$$
+
+generado bajo la logging policy $b$, y el objetivo de OPE consiste en estimar $V^{\pi}$ sin desplegar $\pi$.
+
+La dificultad fundamental es que se observa únicamente la recompensa asociada a la acción elegida. Para una observación $(X_i,A_i,R_i)$ no conocemos qué recompensa se habría obtenido bajo las acciones $a\neq A_i$. Esta estructura de *bandit feedback* impide calcular directamente el valor de una política alternativa a partir de los datos observados.
+
+## Dificultades
+
+La posibilidad y la precisión de la evaluación offline dependen de varios mecanismos distintos.
+
+En primer lugar, algunos estimadores dependen de la función de recompensa condicional $\mu(x,a)$ y otros de las propensiones de la logging policy $b(a \mid x)$. En la práctica, estas cantidades pueden ser desconocidas y sustituirse por estimaciones $\hat{\mu}$ y $\hat{b}$. La misspecification de estos nuisance models puede entonces introducir sesgo o eliminar garantías de consistencia.
+
+En segundo lugar, los estimadores basados en importance weighting utilizan ratios de la forma
+
+$$
+w(x,a)
+=
+\frac{\pi(a \mid x)}{b(a \mid x)}.
+$$
+
+Incluso cuando estos ratios están bien definidos, pueden ser muy grandes o muy dispersos si la target policy asigna una probabilidad elevada a acciones poco frecuentes bajo la logging policy. Esto convierte el overlap entre ambas políticas en un determinante importante de la varianza.
+
+Finalmente, para que una política pueda ser evaluada mediante los datos generados por $b$ es fundamental la condición de **positivity**:
+
+$$
+\pi(a \mid x)>0
+\quad\Longrightarrow\quad
+b(a \mid x)>0
+$$
+
+para todo $(x,a)$ relevante. Si esta condición falla, la target policy asigna probabilidad positiva a acciones que nunca aparecen bajo la logging policy en determinados contextos. En ese régimen, el problema puede dejar de ser simplemente uno de alta varianza y convertirse en un problema de identificación.
+
+## Objetivo y enfoque
+
+El objetivo de este trabajo es estudiar cuándo y por qué fallan cuatro estimadores fundamentales de OPE en contextual bandits: Direct Method (DM), Inverse Propensity Scoring (IPS), Self-Normalized IPS (SNIPS) y Doubly Robust (DR).
+
+En particular, se estudia cómo su sesgo, varianza y error cuadrático medio responden a cuatro mecanismos: misspecification de los nuisance models, weak overlap, policy shift y violación de positivity. La pregunta central es:
+
+> **¿Cuándo y por qué fallan DM, IPS, SNIPS y DR al evaluar offline políticas de contextual bandits, en función de la especificación de los nuisance models, el overlap entre políticas, el policy shift y la falta de positivity?**
+
+Para responderla se construye un laboratorio sintético deliberadamente pequeño en el que se conocen exactamente $P_X$, $\mu$, $b$ y $\pi$. Esto permite conocer $V^{\pi}$ de forma exacta y modificar de manera controlada los mecanismos de interés, comparando las predicciones teóricas con resultados Monte Carlo.
+
 # Estimadores
 
-Se define el valor de una política $\pi : \mathcal{X} \to \Delta(\mathcal{A})$ como la recompensa esperada bajo la política $\pi$:
-$$
-V^{\pi} = \mathbb{E}_{\pi} [R] = \mathbb{E}\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right]
-$$
-
-donde $\mu(X,a) := \mathbb{E}[R|X,A=a]$ es la recompensa esperada condicionada al contexto  
-$X \in \mathcal{X}$ y a la acción $A=a$, y $\Delta(\mathcal{A})$ es el conjunto de distribuciones de probabilidad sobre el espacio de acciones $\mathcal{A}$.
+Los cuatro estimadores estudiados representan estrategias distintas para reconstruir el valor contrafactual de la target policy a partir de bandit feedback. DM sustituye las recompensas no observadas por predicciones de un reward model; IPS evita modelar las recompensas y repondera las observaciones mediante las propensiones; SNIPS normaliza esos mismos pesos para estabilizar la estimación; y DR combina un baseline basado en el reward model con una corrección residual mediante importance weighting. Esta descomposición será útil posteriormente, ya que los distintos mecanismos mediante los cuales los anteriores estimadores fallan afectan de forma diferente a cada componente.
 
 ## DM (Direct Method)
 
+La idea de DM es estimar primero qué recompensa produciría cada acción en cada contexto mediante $\hat{\mu}(x,a)$, y después promediar esas predicciones según las probabilidades de la target policy.
+
 La contribución individual de cada observación al estimador DM del valor de la política objetivo $\pi$ es:
 $$
-\psi_i^{DM} = \sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}
+\psi_i^{DM} = \sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}
 $$
 
 donde $\hat{\mu} (X_i,a)$ es un estimador de la función de valor condicional 
 
 $$
-\mu (X_i,a) = \mathbb{E}[R|X_i,A_i=a]
+\mu (X_i,a) = \mathbb{E}[R \mid X_i,A_i=a]
 $$
+
+[@dudik2011].
 
 Así, el estimador DM del valor de la política objetivo $\pi$ es:
 
 $$
-\hat{V}_{DM}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{DM} = \frac{1}{n} \sum_{i=1}^{n} \sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}
+\hat{V}_{DM}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{DM} = \frac{1}{n} \sum_{i=1}^{n} \sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}
 $$
 
 **Supuestos:**  
@@ -49,13 +160,13 @@ $$
 \begin{aligned}
 Bias_{DM} &= \mathbb{E}\left[\hat{V}_{DM}^{\pi}\right] - V^{\pi} \\
 &= 
-\mathbb{E}\left[\frac{1}{n} \sum_{i=1}^{n} \sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}\left[\frac{1}{n} \sum_{i=1}^{n} \sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &= 
-\frac{1}{n} \sum_{i=1}^{n} \mathbb{E}\left[\sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\frac{1}{n} \sum_{i=1}^{n} \mathbb{E}\left[\sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &= 
-\mathbb{E}_X\left[\sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &= 
-\mathbb{E}_X\left[\sum_a {\pi (a|X) \cdot (\hat{\mu} (X,a) - \mu (X,a))}\right]
+\mathbb{E}_X\left[\sum_a {\pi (a \mid X) \cdot (\hat{\mu} (X,a) - \mu (X,a))}\right]
 \end{aligned}
 $$
 
@@ -66,11 +177,15 @@ $$
 para todo $a$ en el soporte de la política objetivo $\pi$.
 
 
-## IPS (Inverse Propensity Score)
+## IPS (Inverse Propensity Scoring)
 
-Contribución individual por observación al estimador IPS del valor de la política objetivo $\pi$:
+IPS sigue la estrategia opuesta: no intenta modelar las recompensas contrafactuales, sino que utiliza las recompensas realmente observadas y corrige la diferencia entre logging y target mediante importance weights. Una observación recibe más peso cuanto más probable es su acción bajo π en relación con b.
+
+El estimador IPS es una aplicación del principio de reponderación de Horvitz-Thompson al problema de evaluación off-policy [@horvitz1952; @wang2017].
+
+La contribución individual por observación al estimador IPS del valor de la política objetivo $\pi$ es:
 $$
-\psi_i^{IPS} = \frac{\pi(A_i|X_i)}{b(A_i|X_i)} \cdot R_i
+\psi_i^{IPS} = \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)} \cdot R_i
 $$
 
 Estimador IPS del valor de la política objetivo $\pi$:
@@ -78,9 +193,11 @@ $$
 \hat{V}_{IPS}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{IPS}
 $$
 
+
+
 **Supuestos:**  
 
-- Positividad: $\pi(a|x) > 0 \implies b(a|x) > 0$
+- Positividad: $\pi(a \mid x) > 0 \implies b(a \mid x) > 0$
 
 
 El sesgo del estimador IPS del valor de la política objetivo $\pi$ es:
@@ -88,19 +205,19 @@ El sesgo del estimador IPS del valor de la política objetivo $\pi$ es:
 \begin{aligned}
 Bias_{IPS} &= \mathbb{E}\left[\hat{V}_{IPS}^{\pi}\right] - V^{\pi} \\
 &=
-\mathbb{E}_X\left[\mathbb{E}\left[\hat{V}_{IPS}^{\pi}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\mathbb{E}\left[\hat{V}_{IPS}^{\pi}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\mathbb{E}\left[\frac{1}{n} \sum_{i=1}^{n} \frac{\pi(A_i|X)}{b(A_i|X)} \cdot R_i|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\mathbb{E}\left[\frac{1}{n} \sum_{i=1}^{n} \frac{\pi(A_i \mid X)}{b(A_i \mid X)} \cdot R_i \mid X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\frac{1}{n} \sum_{i=1}^{n} \mathbb{E}\left[\frac{\pi(A_i|X)}{b(A_i|X)} \cdot R_i|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\frac{1}{n} \sum_{i=1}^{n} \mathbb{E}\left[\frac{\pi(A_i \mid X)}{b(A_i \mid X)} \cdot R_i \mid X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\mathbb{E}\left[\frac{\pi(A|X)}{b(A|X)} \cdot R|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} \cdot R \mid X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\sum_a P(A=a|X) \cdot \mathbb{E}\left[\frac{\pi(A|X)}{b(A|X)} \cdot R|X, A=a\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a P(A=a \mid X) \cdot \mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} \cdot R \mid X, A=a\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\sum_a b(a|X) \cdot \frac{\pi(a|X)}{b(a|X)} \cdot \mathbb{E}[R|X, A=a]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a b(a \mid X) \cdot \frac{\pi(a \mid X)}{b(a \mid X)} \cdot \mathbb{E}[R \mid X, A=a]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &= 0
 
 \end{aligned}
@@ -108,17 +225,17 @@ Bias_{IPS} &= \mathbb{E}\left[\hat{V}_{IPS}^{\pi}\right] - V^{\pi} \\
 Si no se conoce $b$, y se estima como $\hat{b}$, el sesgo del estimador IPS del valor de la política objetivo $\pi$ es:
 
 \begin{aligned}
-Bias_{IPS} = ... &= \mathbb{E}_X\left[\sum_a b(a|X) \cdot \frac{\pi(a|X)}{\hat{b}(a|X)} \cdot \mathbb{E}[R|X, A=a]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+Bias_{IPS} = ... &= \mathbb{E}_X\left[\sum_a b(a \mid X) \cdot \frac{\pi(a \mid X)}{\hat{b}(a \mid X)} \cdot \mathbb{E}[R \mid X, A=a]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \frac{b(a|X)}{\hat{b}(a|X)} \cdot \mu(X,a)\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \frac{b(a \mid X)}{\hat{b}(a \mid X)} \cdot \mu(X,a)\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \left(\frac{b(a|X)}{\hat{b}(a|X)} -1\right) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \left(\frac{b(a \mid X)}{\hat{b}(a \mid X)} -1\right) \cdot \mu(X,a)\right] \\
 
 \end{aligned}
 
 con lo cual el sesgo del estimador IPS del valor de la política objetivo $\pi$ es cero si 
 $$
-\frac{b(a|X)}{\hat{b}(a|X)} = 1 \iff \hat{b}(a|X) = b(a|X) 
+\frac{b(a \mid X)}{\hat{b}(a \mid X)} = 1 \iff \hat{b}(a \mid X) = b(a \mid X) 
 $$
 
 para todo $a$ en el soporte de la política objetivo $\pi$.
@@ -127,7 +244,7 @@ para todo $a$ en el soporte de la política objetivo $\pi$.
 Para hallar su varianza, definimos 
 
 $$
-Z_i = \frac{\pi(A_i|X_i)}{b(A_i|X_i)} \cdot R_i
+Z_i = \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)} \cdot R_i
 $$
 
 Entonces 
@@ -151,45 +268,47 @@ $$
 Bajo la logging policy verdadera y la hipótesis de positividad,
 
 $$
-\mathbb{E} [Z] = \mathbb{E}\left[\frac{\pi(A|X)}{b(A|X)} \cdot R\right] = V^{\pi}
+\mathbb{E} [Z] = \mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} \cdot R\right] = V^{\pi}
 $$
 
 Por tanto, solo hay que calcular $\mathbb{E} [Z^2]$. Condicionamos primero en X:
 
 \begin{aligned}
-\mathbb{E} [Z^2] &= \mathbb{E}_X\left[\mathbb{E}[Z^2|X]\right] \\
-&= \mathbb{E}_X\left[\sum_a P(A=a|X) \cdot \mathbb{E}[Z^2|X, A=a]\right] \\
-&= \mathbb{E}_X\left[\sum_a b(a|X) \cdot \mathbb{E}\left[\left(\frac{\pi(A|X)}{b(A|X)} \cdot R\right)^2|X, A=a\right]\right] \\
-&= \mathbb{E}_X\left[\sum_a b(a|X) \cdot \frac{\pi(a|X)^2}{b(a|X)^2} \cdot \mathbb{E}[R^2|X, A=a]\right] \\
-&= \mathbb{E}_X\left[\sum_a \frac{\pi(a|X)^2}{b(a|X)} \cdot \mathbb{E}[R^2|X, A=a]\right]
+\mathbb{E} [Z^2] &= \mathbb{E}_X\left[\mathbb{E}[Z^2 \mid X]\right] \\
+&= \mathbb{E}_X\left[\sum_a P(A=a \mid X) \cdot \mathbb{E}[Z^2 \mid X, A=a]\right] \\
+&= \mathbb{E}_X\left[\sum_a b(a \mid X) \cdot \mathbb{E}\left[\left(\frac{\pi(A \mid X)}{b(A \mid X)} \cdot R\right)^2 \mid X, A=a\right]\right] \\
+&= \mathbb{E}_X\left[\sum_a b(a \mid X) \cdot \frac{\pi(a \mid X)^2}{b(a \mid X)^2} \cdot \mathbb{E}[R^2 \mid X, A=a]\right] \\
+&= \mathbb{E}_X\left[\sum_a \frac{\pi(a \mid X)^2}{b(a \mid X)} \cdot \mathbb{E}[R^2 \mid X, A=a]\right]
 
 \end{aligned}
 
 Por tanto,
 
 $$
-Var(\hat{V}_{IPS}^{\pi}) = \frac{1}{N} \left( \mathbb{E}_X\left[\sum_a \frac{\pi(a|X)^2}{b(a|X)} \cdot \mathbb{E}[R^2|X, A=a]\right] - (V^{\pi})^2 \right)
+Var(\hat{V}_{IPS}^{\pi}) = \frac{1}{n}\left( \mathbb{E}_X\left[\sum_a \frac{\pi(a \mid X)^2}{b(a \mid X)} \cdot \mathbb{E}[R^2 \mid X, A=a]\right] - (V^{\pi})^2 \right)
 $$
 
 
-Si $R|X=x, A=a ~ Bernoulli(\mu(x,a))$ (como en nuestro DGP), entonces $R^2 = R$, y por tanto 
+Si $R \mid X=x, A=a \sim Bernoulli(\mu(x,a))$ (como en nuestro DGP), entonces $R^2 = R$, y por tanto 
 
 $$
-\mathbb{E} [R^2|X=x, A=a] = \mathbb{E}[R|X=x, A=a] = \mu(x,a)
+\mathbb{E} [R^2 \mid X=x, A=a] = \mathbb{E}[R \mid X=x, A=a] = \mu(x,a)
 $$
 
 Entonces:
 
 $$
-Var(\hat{V}_{IPS}^{\pi}) = \frac{1}{N} \left( \mathbb{E}_X\left[\sum_a \frac{\pi(a|X)^2}{b(a|X)} \cdot \mu(X,a)\right] - (V^{\pi})^2 \right)
+Var(\hat{V}_{IPS}^{\pi}) = \frac{1}{n}\left( \mathbb{E}_X\left[\sum_a \frac{\pi(a \mid X)^2}{b(a \mid X)} \cdot \mu(X,a)\right] - (V^{\pi})^2 \right)
 $$
 
 ## SNIPS (Self-Normalized IPS)
 
-Contribución individual por observación al estimador SNIPS del valor de la política objetivo $\pi$:
+SNIPS parte de los mismos importance weights que IPS, pero los normaliza por su media muestral. La normalización busca limitar la influencia de fluctuaciones en la masa total de los pesos y puede estabilizar la varianza, a cambio de convertir el estimador en un cociente y perder la insesgadez exacta en muestra finita. 
+
+La contribución individual por observación al estimador SNIPS del valor de la política objetivo $\pi$ es:
 $$
 \psi_i^{SNIPS} = \frac{W_i \cdot R_i}{\frac{1}{n}\sum_{i=1}^{n} W_i} 
- \quad , \quad W_i \,= \; \frac{\pi(A_i|X_i)}{b(A_i|X_i)}
+ \quad , \quad W_i \,= \; \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)}
 $$
 
 En este caso, el factor de normalización $\frac{1}{n}$ se cancela en numerador y denominador, y por tanto, el estimador SNIPS del valor de la política objetivo $\pi$ es:
@@ -198,25 +317,27 @@ $$
 \hat{V}_{SNIPS}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{SNIPS} = \frac{\sum_{i=1}^{n} W_i R_i}{\sum_{i=1}^{n} W_i}
 $$
 
+[@swaminathan2015].
+
 **Supuestos:**  
 
-- Positividad: $\pi(a|x) > 0 \implies b(a|x) > 0$
+- Positividad: $\pi(a \mid x) > 0 \implies b(a \mid x) > 0$
 
 
 En tal caso, se cumple 
 
 \begin{aligned}
-\mathbb{E}\left[\frac{\pi(A|X)}{b(A|X)} | X\right] &= \sum_a P(A=a|X) \cdot \frac{\pi(a|X)}{b(a|X)} \\
+\mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} | X\right] &= \sum_a P(A=a \mid X) \cdot \frac{\pi(a \mid X)}{b(a \mid X)} \\
 &= 
-\sum_a b(a|X) \cdot \frac{\pi(a|X)}{b(a|X)} \\
-&= \sum_a \pi(a|X) \\ 
+\sum_a b(a \mid X) \cdot \frac{\pi(a \mid X)}{b(a \mid X)} \\
+&= \sum_a \pi(a \mid X) \\ 
 &= 1
 \end{aligned}
 
 Por tanto,
 
 $$
-\mathbb{E}\left[\frac{\pi(A|X)}{b(A|X)}\right] = \mathbb{E}_X\left[\mathbb{E}\left[\frac{\pi(A|X)}{b(A|X)} | X\right]\right] = \mathbb{E}_X[1] = 1
+\mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)}\right] = \mathbb{E}_X\left[\mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} | X\right]\right] = \mathbb{E}_X[1] = 1
 $$
 
 
@@ -230,7 +351,7 @@ Además, como
 
 $$
 \begin{aligned}
-\mathbb{E}\left[\sum_i W_i R_i\right] &= n \cdot \mathbb{E}\left[\frac{\pi(A|X)}{b(A|X)} \cdot R\right] \\
+\mathbb{E}\left[\sum_i W_i R_i\right] &= n \cdot \mathbb{E}\left[\frac{\pi(A \mid X)}{b(A \mid X)} \cdot R\right] \\
 &= 
 n \cdot \mathbb{E}\left[\psi^{IPS}\right] \\
 &= 
@@ -242,7 +363,7 @@ n \cdot V^{\pi}
 \end{aligned}
 $$
 
-y \ $\mathbb{E}[\sum_i W_i] = n \cdot \mathbb{E}[\frac{\pi(A|X)}{b(A|X)}] = n$, en general se tiene que
+y \ $\mathbb{E}[\sum_i W_i] = n \cdot \mathbb{E}[\frac{\pi(A \mid X)}{b(A \mid X)}] = n$, en general se tiene que
 
 $$
 \mathbb{E}\left[\frac{\sum_i W_i R_i}{\sum_i W_i}\right] \neq \frac{\mathbb{E}[\sum_i W_i R_i]}{\mathbb{E}[\sum_i W_i]} = \frac{n \cdot V^{\pi}}{n} = V^{\pi}
@@ -266,9 +387,11 @@ $$
 
 ## DR (Doubly Robust)
 
+DR toma la predicción de DM como baseline y utiliza importance weighting únicamente para corregir el residual $R - \hat{\mu}(X, A)$. 
+
 Contribución individual por observación al estimador DR del valor de la política objetivo $\pi$:
 $$
-\psi_i^{DR} = \frac{\pi(A_i|X_i)}{b(A_i|X_i)} \cdot (R_i - \hat{\mu} (X_i,A_i)) \, + \, \sum_a {\pi (a|X_i) \cdot \hat{\mu} (X_i,a)}
+\psi_i^{DR} = \frac{\pi(A_i \mid X_i)}{b(A_i \mid X_i)} \cdot (R_i - \hat{\mu} (X_i,A_i)) \, + \, \sum_a {\pi (a \mid X_i) \cdot \hat{\mu} (X_i,a)}
 $$
 
 Estimador DR del valor de la política objetivo $\pi$:
@@ -276,30 +399,32 @@ $$
 \hat{V}_{DR}^{\pi} \, = \frac{1}{n} \sum_{i=1}^{n} \psi_i^{DR}
 $$
 
+[@dudik2011].
+
 **Supuestos:**  
 
 - $\hat{\mu}(X_i,a)$ está definido en el soporte de la política objetivo $\pi$  
-- Positividad: $\pi(a|x) > 0 \implies b(a|x) > 0$
+- Positividad: $\pi(a \mid x) > 0 \implies b(a \mid x) > 0$
 
-Supuesto desconocido también $b(a|x)$, y estimado mediante $\hat{b}(a|x)$, el sesgo del estimador DR del valor de la política objetivo $\pi$ es:
+Si la logging policy $b(a \mid x)$ también es desconocida y se sustituye por una estimación $\hat{b}(a \mid x)$, el sesgo del estimador DR del valor de la política objetivo $\pi$ viene dado por:
 
 \begin{aligned}
 
 Bias_{DR} &= \mathbb{E}\left[\hat{V}_{DR}^{\pi}\right] - V^{\pi} \\
 &=
-\mathbb{E}_X\left[\mathbb{E}\left[\hat{V}_{DR}^{\pi}|X\right]\right] - \mathbb{E}_X \left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\mathbb{E}\left[\hat{V}_{DR}^{\pi}|X\right]\right] - \mathbb{E}_X \left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\mathbb{E} \left[\frac{1}{n} \sum_{i=1}^{n} \frac{\pi(A_i|X)}{\hat{b}(A_i|X)} \cdot (R_i - \hat{\mu} (X,A_i)) + \sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\mathbb{E} \left[\frac{1}{n} \sum_{i=1}^{n} \frac{\pi(A_i \mid X)}{\hat{b}(A_i \mid X)} \cdot (R_i - \hat{\mu} (X,A_i)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\mathbb{E} \left[\frac{\pi(A|X)}{\hat{b}(A|X)} \cdot (R - \hat{\mu} (X,A)) + \sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\mathbb{E} \left[\frac{\pi(A \mid X)}{\hat{b}(A \mid X)} \cdot (R - \hat{\mu} (X,A)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}|X\right]\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\sum_a P(A=a|X) \cdot \frac{\pi(a|X)}{\hat{b}(a|X)} \cdot\mathbb{E} [ (R - \hat{\mu} (X,a))|X, A=a] + \sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a P(A=a \mid X) \cdot \frac{\pi(a \mid X)}{\hat{b}(a \mid X)} \cdot\mathbb{E} [ (R - \hat{\mu} (X,a))|X, A=a] + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \frac{b(a|X)}{\hat{b}(a|X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a|X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \mu(X,a)\right] \\
+\mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \frac{b(a \mid X)}{\hat{b}(a \mid X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a \mid X) \cdot \hat{\mu} (X,a)}\right] - \mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \mu(X,a)\right] \\
 &=
-\mathbb{E}_X\left[\sum_a \pi(a|X) \cdot \frac{b(a|X)}{\hat{b}(a|X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a|X) \cdot (\hat{\mu} (X,a) - \mu(X,a))}\right]  \\
+\mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot \frac{b(a \mid X)}{\hat{b}(a \mid X)} \cdot (\mu (X,a) - \hat{\mu} (X,a)) + \sum_a {\pi (a \mid X) \cdot (\hat{\mu} (X,a) - \mu(X,a))}\right]  \\
 &=
-\mathbb{E}_X\left[\sum_a \pi(a|X) \cdot (1-\frac{b(a|X)}{\hat{b}(a|X)}) \cdot (\hat{\mu} (X,a) - \mu (X,a) ) \right]  \\
+\mathbb{E}_X\left[\sum_a \pi(a \mid X) \cdot (1-\frac{b(a \mid X)}{\hat{b}(a \mid X)}) \cdot (\hat{\mu} (X,a) - \mu (X,a) ) \right]  \\
 
 \end{aligned}
 
@@ -309,9 +434,9 @@ $$
 $$
 para todo $a$ en el soporte de la política objetivo $\pi$, como si 
 $$
-\hat{b}(a|x) = b(a|x)
+\hat{b}(a \mid x) = b(a \mid x)
 $$
-para todo $a$ en el soporte de la política objetivo $\pi$. De ahí la propiedad de doble robustez.
+para todo $a$ en el soporte de la política objetivo $\pi$. De ahí la propiedad de doble robustez [@dudik2011].
 
 ## Nota
 
@@ -325,7 +450,8 @@ Para los experimentos de este informe, se define un generador de datos (DGP) con
 
 **Contexto:** \ $X \in \{0,1\}$, con $P(X=1)=0.5$
 
-**Recompensa media:** \ $\mu(X,A) = \mathbb{E}[R|X,A]$, definida como
+
+**Recompensa media:** \ $\mu(X,A) = \mathbb{E}[R \mid X,A]$, definida como
 
 $$
 \mu = \begin{pmatrix} 0.2 & 0.8 \\ 0.7 & 0.4 \end{pmatrix}
@@ -333,18 +459,80 @@ $$
 
 donde la primera fila corresponde a $X=0$ y la segunda a $X=1$, y la primera columna corresponde a $A=0$ y la segunda a $A=1$.
 
+**Recompensas:** \ Las recompensas son binarias. Condicionado al contexto y a la acción,
+
+$$
+R \mid X=x,A=a \sim \operatorname{Bernoulli}(\mu(x,a)).
+$$
+
+Por tanto,
+
+$$
+\mathbb{E}[R \mid X=x,A=a] = \mu(x,a).
+$$
+
 **Logging policy y target policy:** 
 $$
 b = \begin{pmatrix} 0.7 & 0.3 \\ 0.3 & 0.7 \end{pmatrix}, \quad
 \pi = \begin{pmatrix} 0.2 & 0.8 \\ 0.8 & 0.2 \end{pmatrix}
 $$
 
-**Valores exactos:** $V(b) = 0.435, V(π) = 0.66.$  
+**Valores exactos:** $V^{b} = 0.435, V^{\pi} = 0.66.$  
 Salen de aplicar la definición de valor de política a la política de logging y a la target policy, respectivamente.
 
 **Validación:** El DGP se valida mediante simulación Monte Carlo, generando un dataset con 200,000 observaciones, con el cual se realizan comprobaciones para verificar que el DGP se comporta como se espera: por ejemplo, que valores exactos y simulados coinciden, o que las probabilidades son válidas (no negativas y suman 1).
 
 </div>
+
+
+## Protocolo Monte Carlo {.unnumbered}
+
+Para estudiar las propiedades de muestra finita de los estimadores se utilizan $R$ réplicas Monte Carlo independientes. Si $\hat V_1,\ldots,\hat V_R$ son los valores obtenidos por un estimador en las $R$ réplicas y $V^{\pi}$ es el valor verdadero de la política objetivo, se calcula
+
+$$
+\overline{\hat V}
+=
+\frac{1}{R}
+\sum_{r=1}^R \hat V_r,
+$$
+
+$$
+\widehat{\operatorname{Bias}}_{\mathrm{MC}}
+=
+\overline{\hat V}-V^{\pi},
+$$
+
+$$
+\widehat{\operatorname{Var}}_{\mathrm{MC}}
+=
+\frac{1}{R}
+\sum_{r=1}^R
+\left(
+\hat V_r-\overline{\hat V}
+\right)^2,
+$$
+
+y
+
+$$
+\widehat{\operatorname{MSE}}_{\mathrm{MC}}
+=
+\frac{1}{R}
+\sum_{r=1}^R
+\left(
+\hat V_r-V^{\pi}
+\right)^2.
+$$
+
+Estas cantidades satisfacen, salvo error numérico,
+
+$$
+\widehat{\operatorname{MSE}}_{\mathrm{MC}}
+=
+\widehat{\operatorname{Bias}}_{\mathrm{MC}}^2
++
+\widehat{\operatorname{Var}}_{\mathrm{MC}}.
+$$
 
 
 # Estudio A - Overlap
@@ -359,7 +547,7 @@ $$
 b_\epsilon = \begin{pmatrix} 1 - \epsilon & \epsilon \\ \epsilon & 1 - \epsilon \end{pmatrix}
 $$
 
- Para cada nivel de solapamiento $\epsilon$, simulamos R = 2000 réplicas de tamaño muestral N = 200, y calculamos el sesgo, varianza y MSE de los estimadores DM, IPS, SNIPS y DR. Para DM y DR, usamos el reward model oráculo $\hat{\mu}_{oracle} = \mu$, de forma que el sesgo y la varianza observados aíslan el efecto del overlap sin que interfiera el de un reward model mal especificado.
+ Para cada nivel de solapamiento $\epsilon$, simulamos R = 2000 réplicas de tamaño muestral n= 200, y calculamos el sesgo, varianza y MSE de los estimadores DM, IPS, SNIPS y DR. Para DM y DR, usamos el reward model oráculo $\hat{\mu}_{oracle} = \mu$, de forma que el sesgo y la varianza observados aíslan el efecto del overlap sin que interfiera el de un reward model mal especificado.
 
 
 ## Resultados
@@ -472,7 +660,7 @@ Cabe notar que las estimaciones de IPS y DR en ocasiones llegan a salirse del in
 
 ## Diseño
 
-Generamos R = 2000 datasets con N = 200 observaciones cada uno, y registramos para cada dataset los valores estimados de la política objetivo según el estimador. En concreto, estudiamos 10 configuraciones de estimación, que corresponden a DM con reward models correcto ($\hat{\mu} = \mu$) e incorrecto ($\hat{\mu}_{wrong} = 0.5$), IPS y SNIPS con estimated logging policy correcta ($\hat{b} = b$) e incorrecta ($\hat{b}_{wrong} = 0.5$), y DR cruzado con 
+Generamos R = 2000 datasets con n= 200 observaciones cada uno, y registramos para cada dataset los valores estimados de la política objetivo según el estimador. En concreto, estudiamos 10 configuraciones de estimación, que corresponden a DM con reward models correcto ($\hat{\mu} = \mu$) e incorrecto ($\hat{\mu}_{wrong} = 0.5$), IPS y SNIPS con estimated logging policy correcta ($\hat{b} = b$) e incorrecta ($\hat{b}_{wrong} = 0.5$), y DR cruzado con 
 
 $$
 \hat{\mu} \in \{\mu, \hat{\mu}_{wrong}\} \quad , \quad \hat{b} \in \{b, \hat{b}_{wrong}\}
@@ -591,16 +779,16 @@ Bias_{DR}
 &=
 \mathbb{E}_X \left[
 \sum_a
-\pi(a|X)
-\left(1-\frac{b(a|X)}{\hat b(a|X)}\right)
+\pi(a \mid X)
+\left(1-\frac{b(a \mid X)}{\hat b(a \mid X)}\right)
 \left(\hat\mu(X,a)-\mu(X,a)\right)
 \right]
 \\
 &=
 \mathbb{E}_X \left[
 \sum_a
-\pi(a|X)
-\left(1-\frac{b(a|X)}{0.5}\right)
+\pi(a \mid X)
+\left(1-\frac{b(a \mid X)}{0.5}\right)
 \left(0.5-\mu(X,a)\right)
 \right]
 \\
@@ -608,8 +796,8 @@ Bias_{DR}
 \sum_x P(X=x)
 \left[
 \sum_a
-\pi(a|X=x)
-\left(1-\frac{b(a|X=x)}{0.5}\right)
+\pi(a \mid X=x)
+\left(1-\frac{b(a \mid X=x)}{0.5}\right)
 \left(0.5-\mu(X=x,a)\right)
 \right]
 \\
@@ -642,7 +830,7 @@ En conclusión, ningún estimador domina universalmente, sino que cada uno pierd
 
 ## Pregunta
 
-¿Qué pasa si falla la hipótesis de positividad, es decir, si la logging policy no cubre el soporte de la target policy? Si en lugar de tener un solapamiento parcial con $b(a|x) > 0$ pero pequeño, la logging policy tuviera probabilidad cero ($b(a|x) = 0$) de tomar ciertas acciones que la target policy sí toma ($\pi(a|x) > 0$), ¿sigue siendo posible estimar el valor de la target policy? Esto es, ¿el valor $V(\pi)$ de la target policy sigue estando identificado por la distribución observable?
+¿Qué pasa si falla la hipótesis de positividad, es decir, si la logging policy no cubre el soporte de la target policy? Si en lugar de tener un solapamiento parcial con $b(a \mid x) > 0$ pero pequeño, la logging policy tuviera probabilidad cero ($b(a \mid x) = 0$) de tomar ciertas acciones que la target policy sí toma ($\pi(a \mid x) > 0$), ¿sigue siendo posible estimar el valor de la target policy? Esto es, ¿el valor $V^{\pi}$ de la target policy sigue estando identificado por la distribución observable?
 
 
 ## Diseño
@@ -659,7 +847,7 @@ $$
 \mu_2 = \begin{pmatrix} 0.2 & 0.3 \\ 0.9 & 0.4 \end{pmatrix}
 $$
 
-siendo un reward model que difiere del primero exactamente donde la logging policy tiene probabilidad cero, de forma que la diferencia no es observable a través de los datos generados por el DGP. Estos reward models generan dos "mundos" diferentes, indistinguibles a partir de los datos observables, pero con valores de la target policy diferentes: $V_1(\pi) = 0.66$ y $V_2(\pi) = 0.54$.
+siendo un reward model que difiere del primero exactamente donde la logging policy tiene probabilidad cero, de forma que la diferencia no es observable a través de los datos generados por el DGP. Estos reward models generan dos "mundos" diferentes, indistinguibles a partir de los datos observables, pero con valores de la target policy diferentes: $V^{\pi}_1 = 0.66$ y $V_2(\pi) = 0.54$.
 Usamos una única muestra generada por el DGP, compatible con ambos. De hecho, ambos reward models inducen la misma distribución observable de $(X,A,R)$ bajo esta logging policy. Las celdas $(X,A)$ observadas son $(0,0), (1,1)$, mientras que las no observadas son $(0,1), (1,0)$. Así, 
 
 $$
@@ -701,14 +889,14 @@ Los dos reward models tienen valores distintos de la target policy, mientras que
 
 ## Interpretación
 
-Podemos ver que, a pesar de que $\mu_1$ y $\mu_2$ son observacionalmente indistinguibles a ojos de la logging policy, tienen $V(\pi)$ diferentes. Esto se debe a que el verdadero valor de la política se calcula con las propensiones de la target policy, donde $\mu_1$ y $\mu_2$ sí se distinguen.  
-Es más, ningún estimador que solo utilice los logged data puede recuperar $V(\pi)$, ya que será imposible acceder a información sobre las recompensas de acciones que nunca se llegan a producir, y por tanto ningún estimador basado únicamente en los logged data puede identificar correctamente $V(\pi)$ de manera uniforme en ambos mundos observacionalmente equivalentes; cualquier estimador producirá la misma distribución de estimaciones en ambos mundos, pese a que sus verdaderos valores de $V(\pi)$ sean distintos.  
-Vale la pena comparar este caso de violación de la positividad con el escenario anterior de weak overlap, donde todavía era posible recuperar $V(\pi)$, a costa de una mayor varianza en la estimación. Se trataba de un problema de varianza, donde ahora el problema que tenemos es de identificación.  
+Podemos ver que, a pesar de que $\mu_1$ y $\mu_2$ son observacionalmente indistinguibles a ojos de la logging policy, tienen $V^{\pi}$ diferentes. Esto se debe a que el verdadero valor de la política se calcula con las propensiones de la target policy, donde $\mu_1$ y $\mu_2$ sí se distinguen.  
+Por tanto, $V^{\pi}$ no está identificado por la distribución observable: todo estimador basado únicamente en los logged data tiene la misma distribución bajo ambos mundos observacionalmente equivalentes, aunque $V^{\pi}_{M_1} \neq V^{\pi}_{M_2}$, por lo que ninguno puede ser correcto uniformemente en ambos mundos sin supuestos adicionales [@khan2024].  
+Vale la pena comparar este caso de violación de la positividad con el escenario anterior de weak overlap, donde todavía era posible recuperar $V^{\pi}$, a costa de una mayor varianza en la estimación. Se trataba de un problema de varianza, donde ahora el problema que tenemos es de identificación.  
 Vemos también que tanto IPS como SNIPS devuelven valores finitos, pese a que no se pueda evaluar correctamente la política. Esto no es ninguna casualidad: tanto IPS como SNIPS están estimando el valor del objeto incorrecto. En concreto, IPS está evaluando la contribución de la target policy que cae dentro del soporte de b:
 
 \begin{aligned}
 
-\mathbb{E} \left[\hat{V}_{IPS} \right] &= \sum_x p(x) \cdot \left(\sum_{a : b(a|x)>0} \pi (a|x) \mu(x,a) \right) \\
+\mathbb{E} \left[\hat{V}_{IPS} \right] &= \sum_x p(x) \cdot \left(\sum_{a : b(a \mid x)>0} \pi (a \mid x) \mu(x,a) \right) \\
 &=
 \frac{1}{2}(0.2)(0.2) + \frac{1}{2}(0.2)(0.4) \\
 &= 0.06
@@ -724,7 +912,7 @@ $$
 tenemos que equivale a $\frac{1}{5}$ de la masa de b. Por tanto, en este DGP concreto, como SNIPS normaliza esa masa, SNIPS converge precisamente al valor de b,
 
 $$
-V(b_{\epsilon = 0}) = \frac{1}{2}(0.2) + \frac{1}{2}(0.4) = 0.3
+V^{b_{\epsilon = 0}} = \frac{1}{2}(0.2) + \frac{1}{2}(0.4) = 0.3
 $$
 
 Nótese que sigue siendo posible calcular tanto IPS como SNIPS sin división por cero, ya que precisamente nunca se llegan a observar los escenarios donde el denominador se anula.
@@ -744,10 +932,10 @@ $$
 \pi_\delta = (1- \delta)b + \delta \pi \quad , \quad \delta \in \{0,0.25,0.5,0.75,1\}
 $$
 
-Se toman, además, los nuisance models correctos, R = 2000 réplicas de tamaño muestral N = 200, y el mismo dataset dentro de cada réplica para cada $\delta$, y 
+Se toman, además, los nuisance models correctos, R = 2000 réplicas de tamaño muestral n= 200, y el mismo dataset dentro de cada réplica para cada $\delta$, y 
 
 $$
-V(\pi_\delta) = 0.435 + 0.225\delta
+V^{\pi_\delta} = 0.435 + 0.225\delta
 $$
 
 De este modo, $\delta = 0$ corresponde a la evaluación on-policy $\pi_\delta = b$, mientras que $\delta = 1$ recupera la target policy original.
@@ -864,7 +1052,7 @@ plt.show()
 Se comprueba que, efectivamente, en $\delta = 0$, $\pi_\delta = b$, luego todos los pesos son 1 e IPS y SNIPS coinciden con la media on-policy. A medida que $\delta$ aumenta, la logging policy permanece fija pero los pesos 
 
 $$
-w_\delta (x,a) = \frac{\pi_\delta(a|x)}{b(a|x)}
+w_\delta (x,a) = \frac{\pi_\delta(a \mid x)}{b(a \mid x)}
 $$
 
 se vuelven más dispersos, y por tanto la varianza y el MSE de IPS aumentan fuertemente.  
@@ -873,7 +1061,7 @@ DR permanece esencialmente insesgado, pero su varianza también aumenta porque l
 DM no utiliza importance weighting. Su varianza no sigue la tendencia de IPS/SNIPS/DR: cae hasta aproximadamente $\delta = 0.75$, y luego aumenta ligeramente. En este DGP esto ocurre porque los valores condicionales 
 
 $$
-g_\delta(x) = \sum_a \pi_\delta(a|x)\mu(x,a)
+g_\delta(x) = \sum_a \pi_\delta(a \mid x)\mu(x,a)
 $$ 
 
 se vuelven casi iguales entre los dos contextos cerca de ese punto. En particular, DM estima
@@ -893,6 +1081,51 @@ y se anula en $\delta \approx 0.7333$. Justo por eso alrededor de $\delta = 0.75
 
 Además, el MSE sigue prácticamente a la varianza porque los sesgos son pequeños, salvo que SNIPS añade además un pequeño componente debido a su sesgo de muestra finita.
 
-Aunque el sesgo Monte Carlo observado de IPS y DR se hace progresivamente más negativo, esto no representa un sesgo poblacional creciente: ambos son insesgados bajo las condiciones de este experimento. La forma aproximadamente lineal (exactamente lineal salvo redondeo para IPS y DR) surge porque $\pi_\delta, V(\pi_\delta)$ y ambos estimadores son lineales en $\delta$, y se utilizan las mismas réplicas para todos los valores de $\delta$. Los pequeños sesgos negativos observados son, por tanto, error Monte Carlo.
+Aunque el sesgo Monte Carlo observado de IPS y DR se hace progresivamente más negativo, esto no representa un sesgo poblacional creciente: ambos son insesgados bajo las condiciones de este experimento. La forma aproximadamente lineal (exactamente lineal salvo redondeo para IPS y DR) surge porque $\pi_\delta, V^{\pi_\delta}$ y ambos estimadores son lineales en $\delta$, y se utilizan las mismas réplicas para todos los valores de $\delta$. Los pequeños sesgos negativos observados son, por tanto, error Monte Carlo.
 
-Conviene hacer una comparación con el Estudio A, donde se variaba la logging policy $b$ hacia propensiones pequeñas con $\pi$ fija. Ahora, en cambio, se mantiene $b$ fija y se desplaza $\pi$. Ambos muestran que la dispersión de los ratios $\frac{\pi(a|x)}{b(a|x)}$ es lo que genera el problema de varianza para los estimadores basados en weighting, no simplemente el tener políticas distintas.
+Conviene hacer una comparación con el Estudio A, donde se variaba la logging policy $b$ hacia propensiones pequeñas con $\pi$ fija. Ahora, en cambio, se mantiene $b$ fija y se desplaza $\pi$. Ambos muestran que la dispersión de los ratios $\frac{\pi(a \mid x)}{b(a \mid x)}$ es lo que genera el problema de varianza para los estimadores basados en weighting, no simplemente el tener políticas distintas.
+
+
+# Síntesis y discusión
+
+A lo largo de los cuatro estudios, se han observado los siguientes patrones:
+
+Bajo positivity, tanto misspecification como weak overlap y policy shift pueden generar problemas de sesgo/varianza/consistencia.  
+
+Misspecification del reward model $\hat{\mu}$ afecta a la garantía de insesgadez de DM, mientras que misspecification del logging policy model $\hat{b}$ afecta a la insesgadez (y por tanto consistencia) de IPS, y a la consistencia de SNIPS, ya que este último no partía de insesgadez en muestra finita en general. 
+Misspecification solo afecta a la garantía de doble robustez de DR cuando ambos nuisance models son incorrectos.  
+
+Tanto weak overlap como policy shift afectan a la dispersión de los pesos $\frac{\pi}{b}$, y con ello a la varianza de los estimadores que utilizan propensiones: IPS, SNIPS y DR. Policy shift además, al modificar la target policy $\pi$, puede afectar a la varianza de DM.
+
+Si se viola la positivity, el problema pasa de ser de estimación a identificación. El verdadero valor de la política objetivo $V^{\pi}$ deja de estar identificado por la distribución observable, ya que todo estimador basado únicamente en los logged data tendrá la misma distribución de estimadores en dos mundos $M_1$ y $M_2$ distintos, con reward models $\mu_1$ y $\mu_2$ distintos, y por tanto con valores $V^{\pi}_{M_1}$ y $V^{\pi}_{M_2}$ distintos, pero observacionalmente indistinguibles. Por tanto, ningún estimador basado únicamente en los logged data puede recuperar $V^{\pi}$ uniformemente sin supuestos adicionales.
+
+Además, una conclusión importante es que no existe una dominancia universal entre los estimadores: cada uno intercambia dependencia del reward model, propensities, sesgo y varianza de forma distinta. Resumiendo:  
+
+DM no usa importance weights, así que no sufre directamente de problemas de varianza por weak overlap, pero depende enteramente de $\mu$, y por tanto es sensible a misspecification del reward model.
+
+IPS tiene una garantía de insesgadez con $b$ correcta y positivity, y no necesita reward model. Sin embargo, puede tener enorme varianza cuando $\frac{\pi}{b}$ se dispersa, y pierde esa garantía si $\hat{b}$ está mal especificada.
+
+SNIPS es una versión normalizada de IPS, que puede reducir la varianza a costa de un sesgo de muestra finita; en nuestros experimentos lo hace sustancialmente. También pierde la garantía de consistencia si $\hat{b}$ está mal especificada.
+
+DR combina ambos enfoques y conserva la garantía si al menos uno de los nuisance models está correctamente especificado. Sin embargo, sigue usando importance weights, así que weak overlap y policy shift afectan a su varianza. Además, si ambos nuisance models están mal especificados, pierde la propiedad de doble robustez y puede aparecer sesgo. Además, exige modelar dos objetos en vez de uno.
+
+# Limitaciones 
+
+1. **Simplicidad:** El DGP es deliberadamente simple, con dos contextos, dos acciones y recompensas Bernoulli. Esto nos permite tener mayor control de la teoría detrás de los estimadores y los experimentos, pero deja abierta la cuestión de qué sucede en el caso que X sea continuo (o de muy alta dimensión), que tengamos muchas más acciones, y reward functions más complejas.  
+
+2. **Control:** La misspecification se introduce artificialmente mediante matrices e interpolaciones conocidas, lo cual permite aislar el efecto de la misspecification, pero no reproduce del todo lo que ocurre cuando $\hat{\mu}$ y $\hat{b}$ son modelos aprendidos con error de estimación, regularización y capacidad finita.  
+
+3. **Propensiones conocidas:** Gran parte del análisis usa b verdadera, o una $\hat{b}$ controlada, mientras que en aplicaciones reales, las propensiones pueden estar estimadas, registradas con error o incluso ser desconocidas.  
+
+4. **Estimadores.** El análisis se restringe a DM, IPS, SNIPS y DR. Estos cuatro estimadores representan mecanismos fundamentales de modelado, importance weighting, normalización y doble robustez, pero no agotan los métodos existentes de OPE.
+
+5. **Datos i.i.d.:** Todos los escenarios parten de observaciones independientes e idénticamente distribuidas. No se estudia dependencia temporal, decisiones secuenciales ni RL en general.
+
+
+# Conclusión
+
+En este informe se han estudiado cuatro estimadores del valor de una política objetivo en evaluación offline de contextual bandits —DM, IPS, SNIPS y DR—, combinando análisis teórico y experimentos sintéticos bajo misspecification de los nuisance models, weak overlap, policy shift y violación de positivity.
+
+Bajo positivity, aparecen dos mecanismos principales de fallo. Por un lado, la misspecification de los nuisance models puede hacer que los estimadores pierdan sus garantías de sesgo o consistencia. Por otro, la dispersión de los importance weights $\frac{\pi}{b}$, ya sea inducida por weak overlap o por policy shift, deteriora la varianza de los estimadores basados en reponderación. Cuando positivity deja de cumplirse, el problema cambia cualitativamente: $V^{\pi}$ puede dejar de estar identificado por la distribución observable de los logged data.
+
+Los resultados también muestran que no existe un estimador universalmente dominante. Cada método responde de forma distinta a errores de modelado, propensidades y dispersión de los pesos, por lo que su comportamiento depende del régimen considerado. La simplicidad del laboratorio sintético permitió aislar estos mecanismos y relacionar directamente teoría y resultados empíricos, aunque los valores cuantitativos concretos no deben interpretarse como universales fuera del DGP estudiado.

@@ -1,6 +1,6 @@
 ---
 title: "Anatomía empírica de estimadores de Off-Policy Evaluation (OPE)"
-author: "Noé Fuentes"
+author: "Noé Fuentes Pérez"
 date: "2026-08-11"
 lang: es
 bibliography: references.bib

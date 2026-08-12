@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contextual-bandits-ope"
+version = "0.1.0"
+description = "Empirical study of off-policy evaluation estimators in contextual bandits"
+
+[tool.setuptools]
+packages = ["ope"]

@@ -8,10 +8,12 @@ link-citations: true
 toc: true
 number-sections: true
 code-fold: true
-format: 
+format:
     html:
+        output-file: index.html
         toc-depth: 3
     pdf:
+        output-file: report_en.pdf
         papersize: a4
         colorlinks: true
         include-in-header:

@@ -1,4 +1,5 @@
 # Contextual Bandits OPE Lab
+[![CI](https://github.com/nfuent02/bandit-ope-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/nfuent02/bandit-ope-lab/actions/workflows/ci.yml)
 
 **[Read the full report](https://nfuent02.github.io/bandit-ope-lab/)** ·
 **[PDF](docs/report_en.pdf)** ·

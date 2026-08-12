@@ -39,8 +39,8 @@ Their behavior reflects different trade-offs between modeling assumptions, impor
 The full analysis, including theoretical derivations, Monte Carlo experiments,
 figures, and interpretation, is available here:
 
-- **English:** [HTML](docs/report_en.html) · [PDF](docs/report_en.pdf)
-- **Spanish:** [HTML](docs/report_es.html) · [PDF](docs/report_es.pdf)
+- **English:** [HTML](https://nfuent02.github.io/bandit-ope-lab/) · [PDF](docs/report_en.pdf)
+- **Spanish:** [HTML](https://nfuent02.github.io/bandit-ope-lab/report_es.html) · [PDF](docs/report_es.pdf)
 
 ## Repository structure
 
